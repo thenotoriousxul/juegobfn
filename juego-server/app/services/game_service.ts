@@ -184,6 +184,59 @@ export default class GameService {
   }
 
   /**
+   * Rendirse en un juego
+   */
+  static async surrender(gameId: number, userId: number): Promise<any> {
+    const game = await Game.findOrFail(gameId)
+    if (game.status !== 'active') {
+      throw new Error('El juego no está activo')
+    }
+
+    const player = await GamePlayer.query()
+      .where('gameId', gameId)
+      .where('userId', userId)
+      .firstOrFail()
+
+    const opponent = await GamePlayer.query()
+      .where('gameId', gameId)
+      .where('userId', '!=', userId)
+      .firstOrFail()
+
+    // Registrar un movimiento de rendición
+    await GameMove.create({
+      gameId,
+      playerId: userId,
+      targetPlayerId: opponent.userId,
+      position: 'SUR', // Posición especial para rendición (3 caracteres máximo)
+      hit: false,
+      shipDestroyed: false,
+      finalBoardState: JSON.stringify(JSON.parse(opponent.board))
+    })
+
+    // Finalizar el juego con el oponente como ganador
+    await game.merge({ 
+      status: 'finished', 
+      winnerId: opponent.userId 
+    }).save()
+
+    // Actualizar estadísticas
+    const winner = await User.findOrFail(opponent.userId)
+    const loser = await User.findOrFail(userId)
+    
+    winner.gamesWon++
+    loser.gamesLost++
+    
+    await winner.save()
+    await loser.save()
+
+    return {
+      gameFinished: true,
+      winner: opponent.userId,
+      surrenderedBy: userId
+    }
+  }
+
+  /**
    * Realiza un movimiento en el juego
    */
   static async makeMove(gameId: number, playerId: number, targetPosition: string): Promise<any> {

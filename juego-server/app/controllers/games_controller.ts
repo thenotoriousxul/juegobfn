@@ -24,6 +24,7 @@ export default class GamesController {
           name: game.name,
           status: game.status,
           creator: game.creator.username,
+          creatorId: game.creatorId,
           playerCount: game.players.length,
           players: game.players.map(player => ({
             id: player.userId,
@@ -41,11 +42,85 @@ export default class GamesController {
   }
 
   /**
+   * Obtener juegos activos del usuario
+   */
+  async getActiveGames({ request, response }: HttpContext) {
+    try {
+      const { userId } = request.qs()
+      
+      if (!userId) {
+        return response.status(400).json({
+          success: false,
+          message: 'Se requiere userId'
+        })
+      }
+
+      const activeGames = await Game.query()
+        .where('status', 'active')
+        .whereHas('players', (query) => {
+          query.where('userId', userId)
+        })
+        .preload('creator')
+        .preload('players', (query) => {
+          query.preload('user')
+        })
+
+      return response.json({
+        success: true,
+        activeGames: activeGames.map(game => ({
+          id: game.id,
+          name: game.name,
+          status: game.status,
+          creator: game.creator?.username,
+          players: game.players.map(player => ({
+            id: player.userId,
+            username: player.user.username
+          }))
+        }))
+      })
+    } catch (error) {
+      return response.status(500).json({
+        success: false,
+        message: 'Error al obtener juegos activos',
+        error: error.message
+      })
+    }
+  }
+
+  /**
    * Crear un nuevo juego
    */
   async store({ request, response }: HttpContext) {
     try {
       const { name, creatorId } = request.only(['name', 'creatorId'])
+      
+      // Verificar que el usuario no tenga ya un juego en espera
+      const existingWaitingGame = await Game.query()
+        .where('creatorId', creatorId)
+        .where('status', 'waiting')
+        .first()
+
+      if (existingWaitingGame) {
+        return response.status(400).json({
+          success: false,
+          message: 'Ya tienes un juego en espera. No puedes crear más salas.'
+        })
+      }
+
+      // Verificar que el usuario no esté en un juego activo
+      const existingActiveGame = await Game.query()
+        .where('status', 'active')
+        .whereHas('players', (query) => {
+          query.where('userId', creatorId)
+        })
+        .first()
+
+      if (existingActiveGame) {
+        return response.status(400).json({
+          success: false,
+          message: 'Ya estás en un juego activo. No puedes crear más salas.'
+        })
+      }
       
       const game = await GameService.createGame(name, creatorId)
       
@@ -75,11 +150,32 @@ export default class GamesController {
       const gameId = params.id
       const { userId } = request.only(['userId'])
       
+      // Verificar que el usuario no esté ya en un juego activo
+      const existingActiveGame = await Game.query()
+        .where('status', 'active')
+        .whereHas('players', (query) => {
+          query.where('userId', userId)
+        })
+        .first()
+
+      if (existingActiveGame) {
+        return response.status(400).json({
+          success: false,
+          message: 'Ya estás en un juego activo. No puedes unirte a otro juego.'
+        })
+      }
+      
       const gamePlayer = await GameService.joinGame(gameId, userId)
+      
+      // Si el juego se activó (2 jugadores), redirigir a ambos
+      const game = await Game.findOrFail(gameId)
+      const shouldRedirect = game.status === 'active'
       
       return response.json({
         success: true,
         message: 'Te has unido al juego exitosamente',
+        shouldRedirect,
+        gameId: game.id,
         gamePlayer: {
           id: gamePlayer.id,
           gameId: gamePlayer.gameId,
@@ -87,6 +183,72 @@ export default class GamesController {
           shipsRemaining: gamePlayer.shipsRemaining,
           isCurrentTurn: gamePlayer.isCurrentTurn
         }
+      })
+    } catch (error) {
+      return response.status(400).json({
+        success: false,
+        message: error.message
+      })
+    }
+  }
+
+  /**
+   * Cancelar emparejamiento (eliminar juego en espera)
+   */
+  async cancelMatchmaking({ params, request, response }: HttpContext) {
+    try {
+      const gameId = params.id
+      const { userId } = request.only(['userId'])
+      
+      const game = await Game.findOrFail(gameId)
+      
+      // Verificar que el usuario sea el creador del juego
+      if (game.creatorId !== userId) {
+        return response.status(403).json({
+          success: false,
+          message: 'Solo el creador del juego puede cancelarlo'
+        })
+      }
+      
+      // Verificar que el juego esté en espera
+      if (game.status !== 'waiting') {
+        return response.status(400).json({
+          success: false,
+          message: 'Solo se pueden cancelar juegos en espera'
+        })
+      }
+      
+      // Eliminar el juego y todos sus datos relacionados
+      await GameMove.query().where('gameId', gameId).delete()
+      await GamePlayer.query().where('gameId', gameId).delete()
+      await game.delete()
+      
+      return response.json({
+        success: true,
+        message: 'Emparejamiento cancelado exitosamente'
+      })
+    } catch (error) {
+      return response.status(400).json({
+        success: false,
+        message: error.message
+      })
+    }
+  }
+
+  /**
+   * Rendirse en un juego
+   */
+  async surrender({ params, request, response }: HttpContext) {
+    try {
+      const gameId = params.id
+      const { userId } = request.only(['userId'])
+      
+      const result = await GameService.surrender(gameId, userId)
+      
+      return response.json({
+        success: true,
+        message: 'Te has rendido',
+        result
       })
     } catch (error) {
       return response.status(400).json({
