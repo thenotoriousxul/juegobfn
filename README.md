@@ -1,59 +1,220 @@
-# Juego
+# 🚢 Juego Naval - AdonisJS 6 + Angular 20
 
-This project was generated using [Angular CLI](https://github.com/angular/angular-cli) version 20.0.3.
+Un juego naval completo desarrollado con AdonisJS 6 para el backend y Angular 20 para el frontend, utilizando polling para simular tiempo real.
 
-## Development server
+## 🎯 Características
 
-To start a local development server, run:
+- **Autenticación completa**: Registro e inicio de sesión de usuarios
+- **Juegos multijugador**: Hasta 2 jugadores por partida
+- **Tableros aleatorios**: Generación automática de tableros 8x8 con 15 barcos
+- **Tiempo real**: Polling para actualizaciones en tiempo real
+- **Estadísticas**: Seguimiento de partidas ganadas y perdidas
+- **Historial**: Visualización de movimientos y tableros finales
+- **Interfaz moderna**: Diseño responsive con Bootstrap
 
+## 🛠️ Tecnologías Utilizadas
+
+### Backend (AdonisJS 6)
+- **Framework**: AdonisJS 6
+- **Base de datos**: MySQL
+- **ORM**: Lucid ORM
+- **Autenticación**: Hash de contraseñas
+- **API**: RESTful endpoints
+
+### Frontend (Angular 20)
+- **Framework**: Angular 20
+- **UI**: Bootstrap 5 + ng-bootstrap
+- **HTTP**: Axios para peticiones
+- **Estado**: RxJS para manejo de estado
+- **Polling**: Short y Long polling para tiempo real
+
+## 📋 Requisitos Previos
+
+- Node.js 18+ 
+- MySQL 8.0+
+- npm o yarn
+
+## 🚀 Instalación y Configuración
+
+### 1. Clonar el repositorio
 ```bash
-ng serve
+git clone <tu-repositorio>
+cd juego
 ```
 
-Once the server is running, open your browser and navigate to `http://localhost:4200/`. The application will automatically reload whenever you modify any of the source files.
-
-## Code scaffolding
-
-Angular CLI includes powerful code scaffolding tools. To generate a new component, run:
+### 2. Configurar el Backend
 
 ```bash
-ng generate component component-name
+cd juego-server
+
+# Instalar dependencias
+npm install
+
+# Configurar variables de entorno
+cp .env.example .env
 ```
 
-For a complete list of available schematics (such as `components`, `directives`, or `pipes`), run:
+Editar el archivo `.env` con tu configuración de base de datos:
+```env
+NODE_ENV=development
+PORT=3333
+APP_KEY=tu-app-key-aqui
+HOST=localhost
+
+DB_HOST=localhost
+DB_PORT=3306
+DB_USER=root
+DB_PASSWORD=tu-password
+DB_DATABASE=juego_naval
+```
+
+### 3. Configurar la Base de Datos
 
 ```bash
-ng generate --help
+# Crear la base de datos
+mysql -u root -p
+CREATE DATABASE juego_naval;
+exit;
+
+# Ejecutar migraciones
+node ace migration:run
 ```
 
-## Building
-
-To build the project run:
+### 4. Configurar el Frontend
 
 ```bash
-ng build
+# Volver al directorio raíz
+cd ..
+
+# Instalar dependencias
+npm install
 ```
 
-This will compile your project and store the build artifacts in the `dist/` directory. By default, the production build optimizes your application for performance and speed.
+### 5. Ejecutar la Aplicación
 
-## Running unit tests
-
-To execute unit tests with the [Karma](https://karma-runner.github.io) test runner, use the following command:
-
+#### Terminal 1 - Backend
 ```bash
-ng test
+cd juego-server
+npm run dev
 ```
 
-## Running end-to-end tests
-
-For end-to-end (e2e) testing, run:
-
+#### Terminal 2 - Frontend
 ```bash
-ng e2e
+npm start
 ```
 
-Angular CLI does not come with an end-to-end testing framework by default. You can choose one that suits your needs.
+La aplicación estará disponible en:
+- **Frontend**: http://localhost:4200
+- **Backend API**: http://localhost:3333
 
-## Additional Resources
+## 🎮 Cómo Jugar
 
-For more information on using the Angular CLI, including detailed command references, visit the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+### 1. Registro/Inicio de Sesión
+- Accede a http://localhost:4200
+- Regístrate con un nuevo usuario o inicia sesión
+
+### 2. Crear o Unirse a un Juego
+- En el dashboard, crea un nuevo juego o únete a uno existente
+- Los juegos requieren exactamente 2 jugadores para comenzar
+
+### 3. Jugar
+- Cada jugador tiene un tablero 8x8 con 15 barcos posicionados aleatoriamente
+- Haz clic en el tablero del oponente para disparar
+- Los barcos se hunden cuando todos sus segmentos son golpeados
+- El primer jugador en hundir todos los barcos del oponente gana
+
+### 4. Ver Estadísticas
+- Consulta tu historial de partidas ganadas y perdidas
+- Visualiza los tableros finales de partidas anteriores
+
+## 📊 Estructura del Proyecto
+
+```
+juego/
+├── src/                          # Frontend Angular
+│   ├── app/
+│   │   ├── components/           # Componentes de la UI
+│   │   │   ├── auth/            # Autenticación
+│   │   │   ├── dashboard/       # Dashboard principal
+│   │   │   ├── game/            # Componente del juego
+│   │   │   └── game-board/      # Tablero del juego
+│   │   ├── services/            # Servicios de API
+│   │   └── app.routes.ts        # Rutas de Angular
+│   └── styles.css               # Estilos globales
+├── juego-server/                 # Backend AdonisJS
+│   ├── app/
+│   │   ├── controllers/         # Controladores de API
+│   │   ├── models/              # Modelos de datos
+│   │   └── services/            # Lógica de negocio
+│   ├── database/
+│   │   └── migrations/          # Migraciones de BD
+│   └── start/
+│       └── routes.ts            # Rutas del backend
+└── README.md
+```
+
+## 🔧 API Endpoints
+
+### Autenticación
+- `POST /auth/register` - Registro de usuario
+- `POST /auth/login` - Inicio de sesión
+- `GET /auth/profile/:id` - Perfil de usuario
+
+### Juegos
+- `GET /games` - Listar juegos disponibles
+- `POST /games` - Crear nuevo juego
+- `POST /games/:id/join` - Unirse a un juego
+- `GET /games/:id` - Estado del juego
+- `POST /games/:id/move` - Realizar movimiento
+- `GET /games/:id/moves` - Historial de movimientos
+- `GET /games/:id/details` - Detalles del juego
+
+### Estadísticas
+- `GET /users/:userId/stats` - Estadísticas del usuario
+
+## 🎯 Características Técnicas
+
+### Polling
+- **Short Polling**: Cada 2 segundos para actualizar estado del juego
+- **Long Polling**: Cada 5 segundos para verificar nuevos juegos
+
+### Seguridad
+- Contraseñas hasheadas con bcrypt
+- Validación de datos en frontend y backend
+- Control de acceso a juegos
+
+### Base de Datos
+- **Users**: Información de usuarios y estadísticas
+- **Games**: Información de partidas
+- **GamePlayers**: Jugadores en cada partida
+- **GameMoves**: Historial de movimientos
+
+## 🐛 Solución de Problemas
+
+### Error de conexión a la base de datos
+- Verifica que MySQL esté ejecutándose
+- Confirma las credenciales en el archivo `.env`
+- Asegúrate de que la base de datos `juego_naval` exista
+
+### Error de CORS
+- El backend ya tiene CORS configurado para desarrollo
+- Verifica que el frontend esté en `http://localhost:4200`
+
+### Error de migraciones
+```bash
+cd juego-server
+node ace migration:rollback
+node ace migration:run
+```
+
+## 📝 Licencia
+
+Este proyecto está bajo la Licencia MIT.
+
+## 🤝 Contribuciones
+
+Las contribuciones son bienvenidas. Por favor, abre un issue o pull request.
+
+---
+
+¡Disfruta jugando al Juego Naval! 🚢⚓

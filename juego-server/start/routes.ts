@@ -1,0 +1,35 @@
+/*
+|--------------------------------------------------------------------------
+| Routes file
+|--------------------------------------------------------------------------
+|
+| The routes file is used for defining the HTTP routes.
+|
+*/
+
+import router from '@adonisjs/core/services/router'
+
+// Rutas de autenticación
+router.post('/auth/register', '#controllers/auth_controller.register')
+router.post('/auth/login', '#controllers/auth_controller.login')
+router.get('/auth/profile/:id', '#controllers/auth_controller.profile')
+
+// Rutas de juegos
+router.get('/games', '#controllers/games_controller.index')
+router.post('/games', '#controllers/games_controller.store')
+router.post('/games/:id/join', '#controllers/games_controller.join')
+router.get('/games/:id', '#controllers/games_controller.show')
+router.post('/games/:id/move', '#controllers/games_controller.makeMove')
+router.get('/games/:id/moves', '#controllers/games_controller.getMoves')
+router.get('/games/:id/details', '#controllers/games_controller.getGameDetails')
+
+// Rutas de estadísticas
+router.get('/users/:userId/stats', '#controllers/games_controller.getUserStats')
+
+// Ruta de prueba
+router.get('/', async () => {
+  return {
+    message: 'API del Juego Naval funcionando correctamente',
+    version: '1.0.0'
+  }
+})
