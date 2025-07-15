@@ -1,16 +1,15 @@
-<!-- Barra de Navegación -->
-<nav class="navbar navbar-expand-lg navbar-dark bg-primary" *ngIf="isAuthenticated">
+<!-- Barra de Navegación con azul fuerte estilo dashboard y textos blancos -->
+<nav class="navbar navbar-expand-lg shadow-lg rounded-b-2xl bg-gray-900/90 backdrop-blur-sm border-b border-gray-700/70 text-white" *ngIf="isAuthenticated">
   <div class="container-fluid">
-    <a class="navbar-brand" href="#" (click)="$event.preventDefault(); navigateToDashboard()">
-      🚢 {{ title }}
+    <a class="navbar-brand font-bold tracking-wider flex items-center gap-2 text-2xl text-white" href="#" (click)="$event.preventDefault(); navigateToDashboard()">
+      🚢 <span class="text-white">{{ title }}</span>
     </a>
-    
-    <div class="navbar-nav ms-auto">
-      <span class="navbar-text me-3">
-        👤 {{ currentUser?.username }}
+    <div class="navbar-nav ms-auto flex items-center gap-4">
+      <span class="navbar-text me-3 flex items-center gap-1 text-white">
+        <span class="text-lg text-white">👤</span> <span class="text-white">{{ currentUser?.username }}</span>
       </span>
-      <button class="btn btn-outline-light" (click)="logout()">
-        🚪 Cerrar Sesión
+      <button class="bg-red-700/80 hover:bg-red-800 text-white px-4 py-2 rounded-lg transition-all duration-200 flex items-center gap-2 shadow border-0" (click)="logout()">
+        🚪 <span class="text-white">Cerrar Sesión</span>
       </button>
     </div>
   </div>

@@ -13,19 +13,18 @@ export interface BoardCell {
   standalone: true,
   imports: [CommonModule],
   template: `
-    <div class="game-board">
-      <h5 class="text-center mb-3">{{ title }}</h5>
-      <div class="board-container">
+    <div class="max-w-xl mx-auto flex flex-col items-center justify-center">
+      <h5 class="text-center text-2xl font-bold text-white mb-6 drop-shadow">{{ title }}</h5>
+      <div class="inline-block border-4 border-gray-700 bg-gray-900/90 rounded-2xl p-4 shadow-2xl">
         <!-- Column headers -->
-        <div class="board-header">
-          <div class="cell header"></div>
-          <div class="cell header" *ngFor="let col of columns">{{ col }}</div>
+        <div class="flex">
+          <div class="w-14 h-14 flex items-center justify-center font-bold text-white bg-gray-800 border border-gray-700 rounded-tl-2xl"></div>
+          <div class="w-14 h-14 flex items-center justify-center font-bold text-white bg-gray-800 border border-gray-700" *ngFor="let col of columns">{{ col }}</div>
         </div>
-        
         <!-- Board rows -->
-        <div class="board-row" *ngFor="let row of rows; let rowIndex = index">
-          <div class="cell header">{{ rowIndex + 1 }}</div>
-          <div class="cell" 
+        <div class="flex" *ngFor="let row of rows; let rowIndex = index">
+          <div class="w-14 h-14 flex items-center justify-center font-bold text-white bg-gray-800 border border-gray-700">{{ rowIndex + 1 }}</div>
+          <div class="w-14 h-14 flex items-center justify-center border border-gray-700 transition-all duration-200 text-2xl"
                *ngFor="let col of columns; let colIndex = index"
                [class]="getCellClass(rowIndex, colIndex)"
                (click)="onCellClick(rowIndex, colIndex)"
@@ -34,27 +33,26 @@ export interface BoardCell {
           </div>
         </div>
       </div>
-      
-      <div class="mt-3">
-        <div class="row">
-          <div class="col-md-6">
-            <div class="legend-item">
-              <div class="legend-color water"></div>
-              <span>Agua</span>
+      <div class="mt-8 w-full max-w-md">
+        <div class="grid grid-cols-2 gap-4">
+          <div class="space-y-2">
+            <div class="flex items-center space-x-2">
+              <div class="w-6 h-6 bg-blue-400 border border-gray-700 rounded"></div>
+              <span class="text-base text-white">Agua</span>
             </div>
-            <div class="legend-item">
-              <div class="legend-color ship"></div>
-              <span>Barco</span>
+            <div class="flex items-center space-x-2">
+              <div class="w-6 h-6 bg-brown-600 border border-gray-700 rounded"></div>
+              <span class="text-base text-white">Barco</span>
             </div>
           </div>
-          <div class="col-md-6">
-            <div class="legend-item">
-              <div class="legend-color hit"></div>
-              <span>Impacto</span>
+          <div class="space-y-2">
+            <div class="flex items-center space-x-2">
+              <div class="w-6 h-6 bg-red-500 border border-gray-700 rounded"></div>
+              <span class="text-base text-white">Impacto</span>
             </div>
-            <div class="legend-item">
-              <div class="legend-color miss"></div>
-              <span>Falló</span>
+            <div class="flex items-center space-x-2">
+              <div class="w-6 h-6 bg-gray-500 border border-gray-700 rounded"></div>
+              <span class="text-base text-white">Falló</span>
             </div>
           </div>
         </div>
@@ -62,97 +60,46 @@ export interface BoardCell {
     </div>
   `,
   styles: [`
-    .game-board {
-      max-width: 500px;
-      margin: 0 auto;
-    }
-    
-    .board-container {
-      border: 2px solid #333;
-      display: inline-block;
-    }
-    
-    .board-header {
-      display: flex;
-    }
-    
-    .board-row {
-      display: flex;
-    }
-    
-    .cell {
-      width: 50px;
-      height: 50px;
-      border: 1px solid #ccc;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      font-weight: bold;
-      transition: background-color 0.2s;
-    }
-    
-    .cell:hover {
-      background-color: #f8f9fa;
-    }
-    
-    .cell.header {
-      background-color: #e9ecef;
-      font-weight: bold;
-      cursor: default;
-    }
-    
-    .cell.water {
-      background-color: #87ceeb;
-    }
-    
-    .cell.ship {
-      background-color: #8b4513;
+    /* Estilos personalizados para el tablero de juego */
+    .water {
+      background-color: #60a5fa;
       color: white;
     }
     
-    .cell.hit {
-      background-color: #dc3545;
+    .ship {
+      background-color: #92400e;
       color: white;
     }
     
-    .cell.miss {
-      background-color: #6c757d;
+    .hit {
+      background-color: #ef4444;
       color: white;
     }
     
-    .cell.disabled {
+    .miss {
+      background-color: #6b7280;
+      color: white;
+    }
+    
+    .disabled {
       cursor: not-allowed;
       opacity: 0.7;
     }
     
-    .legend-item {
-      display: flex;
-      align-items: center;
-      margin-bottom: 5px;
+    /* Hover effect para celdas clickeables */
+    .w-10.h-10:not(.disabled):hover {
+      background-color: #f3f4f6;
+      transform: scale(1.05);
     }
     
-    .legend-color {
-      width: 20px;
-      height: 20px;
-      margin-right: 10px;
-      border: 1px solid #ccc;
+    /* Animaciones */
+    .fade-in {
+      animation: fadeIn 0.3s ease-in;
     }
-    
-    .legend-color.water {
-      background-color: #87ceeb;
-    }
-    
-    .legend-color.ship {
-      background-color: #8b4513;
-    }
-    
-    .legend-color.hit {
-      background-color: #dc3545;
-    }
-    
-    .legend-color.miss {
-      background-color: #6c757d;
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
     }
   `]
 })

@@ -26,13 +26,14 @@ export default class AuthController {
         })
       }
 
-      const existingUserByUsername = await User.query().where('username', username).first()
-      if (existingUserByUsername) {
-        return response.status(400).json({
-          success: false,
-          message: 'El nombre de usuario ya existe'
-        })
-      }
+      // Eliminada la validación de username único
+      // const existingUserByUsername = await User.query().where('username', username).first()
+      // if (existingUserByUsername) {
+      //   return response.status(400).json({
+      //     success: false,
+      //     message: 'El nombre de usuario ya existe'
+      //   })
+      // }
 
       const user = await User.create({
         username,

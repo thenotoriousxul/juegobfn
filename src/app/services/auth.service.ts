@@ -34,7 +34,10 @@ export class AuthService {
   }
 
   register(username: string, email: string, password: string): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.apiUrl}/auth/register`, {
+    const url = `${this.apiUrl}/auth/register`;
+    console.log('Register URL:', url);
+    console.log('Register data:', { username, email, password: '***' });
+    return this.http.post<AuthResponse>(url, {
       username,
       email,
       password
@@ -42,7 +45,10 @@ export class AuthService {
   }
 
   login(email: string, password: string): Observable<AuthResponse> {
-    return this.http.post<AuthResponse>(`${this.apiUrl}/auth/login`, {
+    const url = `${this.apiUrl}/auth/login`;
+    console.log('Login URL:', url);
+    console.log('Login data:', { email, password: '***' });
+    return this.http.post<AuthResponse>(url, {
       email,
       password
     }).pipe(

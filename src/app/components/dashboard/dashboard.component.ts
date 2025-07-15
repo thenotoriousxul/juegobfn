@@ -2,7 +2,6 @@ import { Component, OnInit, OnDestroy } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { Router } from '@angular/router';
-import { NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { AuthService, User } from '../../services/auth.service';
 import { GameService, Game, GameStats } from '../../services/game.service';
 import { Subscription } from 'rxjs';
@@ -12,116 +11,122 @@ import { Subscription } from 'rxjs';
   standalone: true,
   imports: [CommonModule, FormsModule],
   template: `
-    <div class="container-fluid">
-      <!-- Header -->
-      <div class="row bg-primary text-white p-3">
-        <div class="col-md-8">
-          <h2>🚢 Juego Naval</h2>
-          <p class="mb-0">Bienvenido, {{ currentUser?.username }}</p>
-        </div>
-        <div class="col-md-4 text-end">
-          <button class="btn btn-outline-light me-2" (click)="showStats()">
-            📊 Estadísticas
-          </button>
-          <button class="btn btn-outline-light" (click)="logout()">
-            🚪 Cerrar Sesión
-          </button>
-        </div>
-      </div>
-
-      <div class="row mt-4">
-        <!-- Sidebar -->
-        <div class="col-md-3">
-          <div class="card">
-            <div class="card-header">
-              <h5>Menú</h5>
+    <div class="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black flex items-center justify-center p-4 relative">
+      <div class="w-full max-w-7xl">
+        <div class="bg-gray-800/50 backdrop-blur-sm rounded-2xl p-8 border border-gray-700/50 shadow-2xl">
+          <!-- Header -->
+          <div class="flex flex-col md:flex-row justify-between items-start md:items-center mb-8">
+            <div>
+              <h2 class="text-2xl font-bold text-white mb-2">🚢 Juego Naval</h2>
+              <p class="text-white">Bienvenido, {{ currentUser?.username }}</p>
             </div>
-            <div class="card-body">
-              <div class="list-group">
-                <button class="list-group-item list-group-item-action" 
-                        [class.active]="activeSection === 'games'"
-                        (click)="setActiveSection('games')">
-                  🎮 Juegos Disponibles
-                </button>
-                <button class="list-group-item list-group-item-action" 
-                        [class.active]="activeSection === 'create'"
-                        (click)="setActiveSection('create')">
-                  ➕ Crear Juego
-                </button>
-                <button class="list-group-item list-group-item-action" 
-                        [class.active]="activeSection === 'active'"
-                        (click)="setActiveSection('active')">
-                  ⚡ Juegos Activos
-                </button>
-              </div>
+            <div class="flex space-x-3 mt-4 md:mt-0">
+              <button class="bg-red-700/80 hover:bg-red-800 text-white px-4 py-2 rounded-lg transition-all duration-200 flex items-center space-x-2 shadow" (click)="showStats()">
+                <span>📊</span>
+                <span>Estadísticas</span>
+              </button>
+              <button class="bg-gray-700/80 hover:bg-gray-800 text-white px-4 py-2 rounded-lg transition-all duration-200 flex items-center space-x-2 shadow" (click)="logout()">
+                <span>🚪</span>
+                <span>Cerrar Sesión</span>
+              </button>
             </div>
           </div>
-
-          <!-- Estadísticas Rápidas -->
-          <div class="card mt-3">
-            <div class="card-header">
-              <h6>📈 Estadísticas Rápidas</h6>
+          <!-- Contenido -->
+          <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+            <!-- Sidebar -->
+            <div class="md:col-span-1 space-y-6">
+              <!-- Menú -->
+              <div class="bg-gray-900/70 rounded-xl shadow-lg overflow-hidden border border-gray-700">
+                <div class="px-6 py-4 border-b border-gray-800">
+                  <h5 class="text-lg font-semibold text-white">Menú</h5>
+                </div>
+                <div class="p-4">
+                  <div class="space-y-2">
+                    <button class="w-full text-left px-4 py-3 rounded-lg transition-all duration-200 flex items-center space-x-3"
+                            [class]="activeSection === 'games' ? 'bg-red-900/60 text-red-300 border-l-4 border-red-500' : 'text-white hover:bg-gray-800'"
+                            (click)="setActiveSection('games')">
+                      <span>🎮</span>
+                      <span>Juegos Disponibles</span>
+                    </button>
+                    <button class="w-full text-left px-4 py-3 rounded-lg transition-all duration-200 flex items-center space-x-3"
+                            [class]="activeSection === 'create' ? 'bg-red-900/60 text-red-300 border-l-4 border-red-500' : 'text-white hover:bg-gray-800'"
+                            (click)="setActiveSection('create')">
+                      <span>➕</span>
+                      <span>Crear Juego</span>
+                    </button>
+                    <button class="w-full text-left px-4 py-3 rounded-lg transition-all duration-200 flex items-center space-x-3"
+                            [class]="activeSection === 'active' ? 'bg-red-900/60 text-red-300 border-l-4 border-red-500' : 'text-white hover:bg-gray-800'"
+                            (click)="setActiveSection('active')">
+                      <span>⚡</span>
+                      <span>Juegos Activos</span>
+                    </button>
+                  </div>
+                </div>
+              </div>
+              <!-- Estadísticas Rápidas -->
+              <div class="bg-gray-900/70 rounded-xl shadow-lg overflow-hidden border border-gray-700">
+                <div class="px-6 py-4 border-b border-gray-800">
+                  <h6 class="text-lg font-semibold text-white">📈 Estadísticas Rápidas</h6>
+                </div>
+                <div class="p-6">
+                  <div class="grid grid-cols-2 gap-4 mb-4">
+                    <div class="text-center">
+                      <div class="text-green-400">
+                        <h4 class="text-2xl font-bold">{{ stats?.wonGames || 0 }}</h4>
+                        <small class="text-white">Ganados</small>
+                      </div>
+                    </div>
+                    <div class="text-center">
+                      <div class="text-red-400">
+                        <h4 class="text-2xl font-bold">{{ stats?.lostGames || 0 }}</h4>
+                        <small class="text-white">Perdidos</small>
+                      </div>
+                    </div>
+                  </div>
+                  <div class="mt-4">
+                    <canvas #statsChart width="200" height="100"></canvas>
+                  </div>
+                </div>
+              </div>
             </div>
-            <div class="card-body">
-              <div class="row text-center">
-                <div class="col-6">
-                  <div class="text-success">
-                    <h4>{{ stats?.wonGames || 0 }}</h4>
-                    <small>Ganados</small>
+            <!-- Main Content -->
+            <div class="md:col-span-3">
+              <!-- Juegos Disponibles -->
+              <div *ngIf="activeSection === 'games'">
+                <div class="bg-gray-900/70 rounded-xl shadow-lg overflow-hidden border border-gray-700">
+                  <div class="px-6 py-4 border-b border-gray-800 flex justify-between items-center">
+                    <h5 class="text-lg font-semibold text-white">🎮 Juegos Disponibles</h5>
+                    <button class="bg-red-700 hover:bg-red-800 text-white px-4 py-2 rounded-lg transition-all duration-200 flex items-center space-x-2" (click)="refreshGames()">
+                      <span>🔄</span>
+                      <span>Actualizar</span>
+                    </button>
                   </div>
-                </div>
-                <div class="col-6">
-                  <div class="text-danger">
-                    <h4>{{ stats?.lostGames || 0 }}</h4>
-                    <small>Perdidos</small>
-                  </div>
-                </div>
-              </div>
-              <div class="mt-2">
-                <canvas #statsChart width="200" height="100"></canvas>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <!-- Main Content -->
-        <div class="col-md-9">
-          <!-- Juegos Disponibles -->
-          <div *ngIf="activeSection === 'games'">
-            <div class="card">
-              <div class="card-header d-flex justify-content-between align-items-center">
-                <h5>🎮 Juegos Disponibles</h5>
-                <button class="btn btn-primary btn-sm" (click)="refreshGames()">
-                  🔄 Actualizar
-                </button>
-              </div>
-              <div class="card-body">
-                <div *ngIf="loading" class="text-center">
-                  <div class="spinner-border" role="status">
-                    <span class="visually-hidden">Cargando...</span>
-                  </div>
-                </div>
-                
-                <div *ngIf="!loading && games.length === 0" class="text-center">
-                  <p>No hay juegos disponibles</p>
-                  <button class="btn btn-primary" (click)="setActiveSection('create')">
-                    Crear un nuevo juego
-                  </button>
-                </div>
-
-                <div *ngIf="!loading && games.length > 0" class="row">
-                  <div *ngFor="let game of games" class="col-md-6 mb-3">
-                    <div class="card h-100">
-                      <div class="card-body">
-                        <h6 class="card-title">{{ game.name }}</h6>
-                        <p class="card-text">
-                          <small class="text-muted">
-                            Creado por: {{ game.creator }}<br>
-                            Jugadores: {{ game.playerCount }}/2<br>
-                            Estado: {{ getStatusText(game.status) }}
-                          </small>
-                        </p>
-                        <button class="btn btn-success btn-sm" 
+                  <div class="p-6">
+                    <div *ngIf="loading" class="text-center py-8">
+                      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
+                      <p class="mt-2 text-white">Cargando juegos...</p>
+                    </div>
+                    <div *ngIf="!loading && games.length === 0" class="text-center py-8">
+                      <p class="text-white mb-4">No hay juegos disponibles</p>
+                      <button class="bg-red-700 hover:bg-red-800 text-white px-6 py-3 rounded-lg transition-all duration-200" (click)="setActiveSection('create')">
+                        Crear un nuevo juego
+                      </button>
+                    </div>
+                    <div *ngIf="!loading && games.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div *ngFor="let game of games" class="bg-gray-800/70 rounded-xl p-6 hover:shadow-xl transition-all duration-200 border border-gray-700">
+                        <h6 class="text-lg font-semibold text-white mb-3">{{ game.name }}</h6>
+                        <div class="space-y-2 mb-4">
+                          <p class="text-sm text-white">
+                            <span class="font-medium">Creado por:</span> {{ game.creator }}
+                          </p>
+                          <p class="text-sm text-white">
+                            <span class="font-medium">Jugadores:</span> {{ game.playerCount }}/2
+                          </p>
+                          <p class="text-sm text-white">
+                            <span class="font-medium">Estado:</span> {{ getStatusText(game.status) }}
+                          </p>
+                        </div>
+                        <button class="w-full bg-green-700 hover:bg-green-800 disabled:bg-gray-600 text-white px-4 py-2 rounded-lg transition-all duration-200" 
                                 [disabled]="game.playerCount >= 2"
                                 (click)="joinGame(game.id)">
                           {{ game.playerCount >= 2 ? 'Lleno' : 'Unirse' }}
@@ -131,46 +136,48 @@ import { Subscription } from 'rxjs';
                   </div>
                 </div>
               </div>
-            </div>
-          </div>
-
-          <!-- Crear Juego -->
-          <div *ngIf="activeSection === 'create'">
-            <div class="card">
-              <div class="card-header">
-                <h5>➕ Crear Nuevo Juego</h5>
-              </div>
-              <div class="card-body">
-                <form (ngSubmit)="createGame()" #createForm="ngForm">
-                  <div class="mb-3">
-                    <label for="gameName" class="form-label">Nombre del Juego</label>
-                    <input type="text" class="form-control" id="gameName" 
-                           [(ngModel)]="newGameName" name="gameName" required>
+              <!-- Crear Juego -->
+              <div *ngIf="activeSection === 'create'">
+                <div class="bg-gray-900/70 rounded-xl shadow-lg overflow-hidden border border-gray-700">
+                  <div class="px-6 py-4 border-b border-gray-800">
+                    <h5 class="text-lg font-semibold text-white">➕ Crear Nuevo Juego</h5>
                   </div>
-                  <button type="submit" class="btn btn-primary" [disabled]="creating">
-                    {{ creating ? 'Creando...' : 'Crear Juego' }}
-                  </button>
-                </form>
-              </div>
-            </div>
-          </div>
-
-          <!-- Juegos Activos -->
-          <div *ngIf="activeSection === 'active'">
-            <div class="card">
-              <div class="card-header">
-                <h5>⚡ Juegos Activos</h5>
-              </div>
-              <div class="card-body">
-                <div *ngIf="activeGames.length === 0" class="text-center">
-                  <p>No tienes juegos activos</p>
+                  <div class="p-6">
+                    <form (ngSubmit)="createGame()" #createForm="ngForm" class="space-y-6">
+                      <div>
+                        <label for="gameName" class="block text-sm font-medium text-white mb-2">Nombre del Juego</label>
+                        <input type="text" 
+                               class="w-full px-4 py-3 bg-gray-800/70 border border-gray-700 rounded-lg text-white focus:ring-2 focus:ring-red-500 focus:border-red-500 transition-all duration-200" 
+                               id="gameName" 
+                               [(ngModel)]="newGameName" 
+                               name="gameName" 
+                               required
+                               placeholder="Ingresa el nombre del juego">
+                      </div>
+                      <button type="submit" 
+                              class="bg-red-700 hover:bg-red-800 disabled:bg-gray-600 text-white px-6 py-3 rounded-lg transition-all duration-200 flex items-center space-x-2" 
+                              [disabled]="creating">
+                        <span *ngIf="creating" class="animate-spin rounded-full h-4 w-4 border-b-2 border-white"></span>
+                        <span>{{ creating ? 'Creando...' : 'Crear Juego' }}</span>
+                      </button>
+                    </form>
+                  </div>
                 </div>
-                <div *ngFor="let game of activeGames" class="mb-3">
-                  <div class="card">
-                    <div class="card-body">
-                      <h6>{{ game.name }}</h6>
-                      <p>Estado: {{ game.status }}</p>
-                      <button class="btn btn-primary" (click)="continueGame(game.id)">
+              </div>
+              <!-- Juegos Activos -->
+              <div *ngIf="activeSection === 'active'">
+                <div class="bg-gray-900/70 rounded-xl shadow-lg overflow-hidden border border-gray-700">
+                  <div class="px-6 py-4 border-b border-gray-800">
+                    <h5 class="text-lg font-semibold text-white">⚡ Juegos Activos</h5>
+                  </div>
+                  <div class="p-6">
+                    <div *ngIf="activeGames.length === 0" class="text-center py-8">
+                      <p class="text-white">No tienes juegos activos</p>
+                    </div>
+                    <div *ngFor="let game of activeGames" class="bg-gray-800/70 rounded-xl p-6 mb-4 hover:shadow-xl transition-all duration-200 border border-gray-700">
+                      <h6 class="text-lg font-semibold text-white mb-2">{{ game.name }}</h6>
+                      <p class="text-white mb-4">Estado: {{ game.status }}</p>
+                      <button class="bg-red-700 hover:bg-red-800 text-white px-6 py-2 rounded-lg transition-all duration-200" (click)="continueGame(game.id)">
                         Continuar Juego
                       </button>
                     </div>
@@ -182,117 +189,68 @@ import { Subscription } from 'rxjs';
         </div>
       </div>
     </div>
-
-    <!-- Modal de Estadísticas -->
-    <div class="modal fade" id="statsModal" tabindex="-1">
-      <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">📊 Estadísticas Detalladas</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-          </div>
-          <div class="modal-body">
-            <div *ngIf="stats">
-              <!-- Resumen General -->
-              <div class="row mb-4">
-                <div class="col-md-3 text-center">
-                  <div class="card bg-primary text-white">
-                    <div class="card-body">
-                      <h3>{{ stats.totalGames }}</h3>
-                      <p class="mb-0">Total Juegos</p>
-                    </div>
-                  </div>
+    <!-- Modal de Estadísticas (sin cambios, pero puedes ajustar colores si lo deseas) -->
+    <div *ngIf="showStatsModal" class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+      <div class="bg-gray-900 rounded-xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto border border-gray-700">
+        <div class="px-6 py-4 border-b border-gray-800 flex justify-between items-center">
+          <h5 class="text-xl font-semibold text-white">📊 Estadísticas Detalladas</h5>
+          <button class="text-white hover:text-white transition-colors" (click)="closeStatsModal()">
+            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="p-6">
+          <div *ngIf="stats">
+            <!-- Resumen General -->
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
+              <div class="bg-red-700 text-white rounded-xl p-6 text-center">
+                <h3 class="text-3xl font-bold">{{ stats.totalGames }}</h3>
+                <p class="text-red-100">Total Juegos</p>
+              </div>
+              <div class="bg-green-700 text-white rounded-xl p-6 text-center">
+                <h3 class="text-3xl font-bold">{{ stats.wonGames }}</h3>
+                <p class="text-green-100">Ganados</p>
+              </div>
+              <div class="bg-red-800 text-white rounded-xl p-6 text-center">
+                <h3 class="text-3xl font-bold">{{ stats.lostGames }}</h3>
+                <p class="text-red-100">Perdidos</p>
+              </div>
+              <div class="bg-gray-800 text-white rounded-xl p-6 text-center">
+                <h3 class="text-3xl font-bold">{{ getWinRate() }}%</h3>
+                <p class="text-gray-100">% Victoria</p>
+              </div>
+            </div>
+            <!-- Gráfica -->
+            <div class="bg-gray-900 rounded-xl shadow-lg p-6 mb-8 border border-gray-700">
+              <h6 class="text-lg font-semibold text-white mb-4">📈 Distribución de Resultados</h6>
+              <canvas id="statsChart" width="400" height="200"></canvas>
+            </div>
+            <!-- Tablas de Juegos -->
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div class="bg-gray-900 rounded-xl shadow-lg overflow-hidden border border-gray-700">
+                <div class="px-6 py-4 border-b border-gray-800 flex justify-between items-center">
+                  <h6 class="text-lg font-semibold text-white">🏆 Juegos Ganados ({{ stats.wonGames }})</h6>
+                  <button class="bg-green-700 hover:bg-green-800 text-white px-3 py-1 rounded-lg text-sm transition-all duration-200" (click)="showWonGamesDetails()">
+                    Ver Detalles
+                  </button>
                 </div>
-                <div class="col-md-3 text-center">
-                  <div class="card bg-success text-white">
-                    <div class="card-body">
-                      <h3>{{ stats.wonGames }}</h3>
-                      <p class="mb-0">Ganados</p>
-                    </div>
-                  </div>
-                </div>
-                <div class="col-md-3 text-center">
-                  <div class="card bg-danger text-white">
-                    <div class="card-body">
-                      <h3>{{ stats.lostGames }}</h3>
-                      <p class="mb-0">Perdidos</p>
-                    </div>
-                  </div>
-                </div>
-                <div class="col-md-3 text-center">
-                  <div class="card bg-info text-white">
-                    <div class="card-body">
-                      <h3>{{ getWinRate() }}%</h3>
-                      <p class="mb-0">% Victoria</p>
-                    </div>
+                <div class="p-6">
+                  <div *ngFor="let game of stats.wonGamesList.slice(0, 3)" class="mb-4 p-3 bg-gray-800/70 rounded-lg text-white">
+                    {{ game.name }}
                   </div>
                 </div>
               </div>
-
-              <!-- Gráfica -->
-              <div class="row mb-4">
-                <div class="col-12">
-                  <div class="card">
-                    <div class="card-header">
-                      <h6>📈 Distribución de Resultados</h6>
-                    </div>
-                    <div class="card-body">
-                      <canvas id="statsChart" width="400" height="200"></canvas>
-                    </div>
-                  </div>
+              <div class="bg-gray-900 rounded-xl shadow-lg overflow-hidden border border-gray-700">
+                <div class="px-6 py-4 border-b border-gray-800 flex justify-between items-center">
+                  <h6 class="text-lg font-semibold text-white">💔 Juegos Perdidos ({{ stats.lostGames }})</h6>
+                  <button class="bg-red-700 hover:bg-red-800 text-white px-3 py-1 rounded-lg text-sm transition-all duration-200" (click)="showLostGamesDetails()">
+                    Ver Detalles
+                  </button>
                 </div>
-              </div>
-
-              <!-- Tablas de Juegos -->
-              <div class="row">
-                <div class="col-md-6">
-                  <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                      <h6 class="mb-0">🏆 Juegos Ganados ({{ stats.wonGames }})</h6>
-                      <button class="btn btn-sm btn-outline-success" (click)="showWonGamesDetails()">
-                        Ver Detalles
-                      </button>
-                    </div>
-                    <div class="card-body">
-                      <div *ngFor="let game of stats.wonGamesList.slice(0, 3)" class="mb-2">
-                        <div class="d-flex justify-content-between align-items-center">
-                          <span>{{ game.name }}</span>
-                          <small class="text-muted">vs {{ game.opponent }}</small>
-                        </div>
-                        <small class="text-muted">{{ game.createdAt | date:'short' }}</small>
-                      </div>
-                      <div *ngIf="stats.wonGamesList.length === 0" class="text-center text-muted">
-                        <p>No hay juegos ganados</p>
-                      </div>
-                      <div *ngIf="stats.wonGamesList.length > 3" class="text-center">
-                        <small class="text-muted">Y {{ stats.wonGamesList.length - 3 }} más...</small>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-                <div class="col-md-6">
-                  <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                      <h6 class="mb-0">😔 Juegos Perdidos ({{ stats.lostGames }})</h6>
-                      <button class="btn btn-sm btn-outline-danger" (click)="showLostGamesDetails()">
-                        Ver Detalles
-                      </button>
-                    </div>
-                    <div class="card-body">
-                      <div *ngFor="let game of stats.lostGamesList.slice(0, 3)" class="mb-2">
-                        <div class="d-flex justify-content-between align-items-center">
-                          <span>{{ game.name }}</span>
-                          <small class="text-muted">vs {{ game.opponent }}</small>
-                        </div>
-                        <small class="text-muted">{{ game.createdAt | date:'short' }}</small>
-                      </div>
-                      <div *ngIf="stats.lostGamesList.length === 0" class="text-center text-muted">
-                        <p>No hay juegos perdidos</p>
-                      </div>
-                      <div *ngIf="stats.lostGamesList.length > 3" class="text-center">
-                        <small class="text-muted">Y {{ stats.lostGamesList.length - 3 }} más...</small>
-                      </div>
-                    </div>
+                <div class="p-6">
+                  <div *ngFor="let game of stats.lostGamesList.slice(0, 3)" class="mb-4 p-3 bg-gray-800/70 rounded-lg text-white">
+                    {{ game.name }}
                   </div>
                 </div>
               </div>
@@ -303,35 +261,151 @@ import { Subscription } from 'rxjs';
     </div>
 
     <!-- Modal de Detalles de Juegos -->
-    <div class="modal fade" id="gameDetailsModal" tabindex="-1">
-      <div class="modal-dialog modal-xl">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">{{ gameDetailsTitle }}</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    <div *ngIf="showGameDetailsModal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50">
+      <div class="bg-gray-900 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border-2 border-gray-700">
+        <div class="bg-gradient-to-r from-gray-800 via-gray-900 to-black px-6 py-4 border-b border-gray-700 flex justify-between items-center rounded-t-2xl">
+          <h5 class="text-xl font-bold text-white drop-shadow flex items-center gap-2">{{ gameDetailsTitle }}</h5>
+          <button class="text-white hover:text-red-400 transition-colors rounded-full p-1" (click)="closeGameDetailsModal()">
+            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="p-6">
+          <div *ngIf="gameDetailsList.length > 0">
+            <div class="overflow-x-auto">
+              <table class="w-full">
+                <thead class="bg-gray-800">
+                  <tr>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Juego</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Oponente</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Fecha</th>
+                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Acciones</th>
+                  </tr>
+                </thead>
+                <tbody class="bg-gray-900 divide-y divide-gray-800">
+                  <tr *ngFor="let game of gameDetailsList" class="hover:bg-gray-800">
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-white">{{ game.name }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">{{ game.opponent }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-400">{{ game.createdAt | date:'short' }}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-300">
+                      <button class="bg-blue-600 hover:bg-blue-400 text-white px-4 py-2 rounded-full shadow transition-all duration-200 text-base font-semibold" (click)="viewGameBoard(game.id)">
+                        Ver Tablero
+                      </button>
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
           </div>
-          <div class="modal-body">
-            <div *ngIf="gameDetailsList.length > 0">
-              <div class="table-responsive">
-                <table class="table table-striped">
-                  <thead>
+        </div>
+      </div>
+    </div>
+
+    <!-- Modal de Tablero Final -->
+    <div *ngIf="showBoardModal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50">
+      <div class="bg-gray-900 rounded-2xl shadow-2xl max-w-6xl w-full max-h-[90vh] overflow-y-auto border-2 border-gray-700">
+        <div class="bg-gradient-to-r from-gray-800 via-gray-900 to-black px-6 py-4 border-b border-gray-700 flex justify-between items-center rounded-t-2xl">
+          <h5 class="text-xl font-bold text-white drop-shadow flex items-center gap-2">🎯 Tablero Final - {{ selectedGame?.name }}</h5>
+          <button class="text-white hover:text-red-400 transition-colors rounded-full p-1" (click)="closeBoardModal()">
+            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="p-6">
+          <div *ngIf="selectedGame && gameBoardState">
+            <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-8">
+              <div>
+                <h6 class="text-lg font-semibold text-white mb-4">Tablero de {{ gameBoardState.player1Username }}</h6>
+                <div class="inline-block border-4 border-gray-700 bg-gray-900/90 rounded-2xl p-4 shadow-2xl">
+                  <div class="flex">
+                    <div class="w-10 h-10 flex items-center justify-center font-bold text-white bg-gray-800 border border-gray-700"></div>
+                    <div class="w-10 h-10 flex items-center justify-center font-bold text-white bg-gray-800 border border-gray-700" *ngFor="let col of gameBoardState.columns">{{ col }}</div>
+                  </div>
+                  <div class="flex" *ngFor="let row of gameBoardState.player1Board; let i = index">
+                    <div class="w-10 h-10 flex items-center justify-center font-bold text-white bg-gray-800 border border-gray-700">{{ i + 1 }}</div>
+                    <div class="w-10 h-10 flex items-center justify-center border border-gray-700 text-2xl"
+                         *ngFor="let cell of row"
+                         [ngClass]="{
+                           'bg-blue-400 text-white': cell === 'water',
+                           'bg-brown-600 text-white': cell === 'ship',
+                           'bg-red-500 text-white': cell === 'hit',
+                           'bg-gray-500 text-white': cell === 'miss'
+                         }">
+                      {{ getCellDisplay(cell) }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+              <div>
+                <h6 class="text-lg font-semibold text-white mb-4">Tablero de {{ gameBoardState.player2Username }}</h6>
+                <div class="inline-block border-4 border-gray-700 bg-gray-900/90 rounded-2xl p-4 shadow-2xl">
+                  <div class="flex">
+                    <div class="w-10 h-10 flex items-center justify-center font-bold text-white bg-gray-800 border border-gray-700"></div>
+                    <div class="w-10 h-10 flex items-center justify-center font-bold text-white bg-gray-800 border border-gray-700" *ngFor="let col of gameBoardState.columns">{{ col }}</div>
+                  </div>
+                  <div class="flex" *ngFor="let row of gameBoardState.player2Board; let i = index">
+                    <div class="w-10 h-10 flex items-center justify-center font-bold text-white bg-gray-800 border border-gray-700">{{ i + 1 }}</div>
+                    <div class="w-10 h-10 flex items-center justify-center border border-gray-700 text-2xl"
+                         *ngFor="let cell of row"
+                         [ngClass]="{
+                           'bg-blue-400 text-white': cell === 'water',
+                           'bg-brown-600 text-white': cell === 'ship',
+                           'bg-red-500 text-white': cell === 'hit',
+                           'bg-gray-500 text-white': cell === 'miss'
+                         }">
+                      {{ getCellDisplay(cell) }}
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </div>
+            <!-- Leyenda -->
+            <div class="bg-gray-900 rounded-xl shadow-lg p-6 mb-8 border border-gray-700">
+              <h6 class="text-lg font-semibold text-white mb-4">📋 Leyenda</h6>
+              <div class="grid grid-cols-2 md:grid-cols-4 gap-4 text-center">
+                <div>
+                  <span class="inline-block bg-brown-600 text-white p-2 rounded-lg text-lg">🚢</span>
+                  <small class="block text-gray-300 mt-1">Barco</small>
+                </div>
+                <div>
+                  <span class="inline-block bg-red-500 text-white p-2 rounded-lg text-lg">🎯</span>
+                  <small class="block text-gray-300 mt-1">Impacto</small>
+                </div>
+                <div>
+                  <span class="inline-block bg-gray-500 text-white p-2 rounded-lg text-lg">💧</span>
+                  <small class="block text-gray-300 mt-1">Agua</small>
+                </div>
+                <div>
+                  <span class="inline-block bg-blue-400 text-white p-2 rounded-lg text-lg">🌊</span>
+                  <small class="block text-gray-300 mt-1">Mar</small>
+                </div>
+              </div>
+            </div>
+            <!-- Movimientos -->
+            <div class="bg-gray-900 rounded-xl shadow-lg p-6 border border-gray-700">
+              <h6 class="text-lg font-semibold text-white mb-4">📋 Historial de Movimientos</h6>
+              <div class="overflow-x-auto">
+                <table class="w-full">
+                  <thead class="bg-gray-800">
                     <tr>
-                      <th>Juego</th>
-                      <th>Oponente</th>
-                      <th>Fecha</th>
-                      <th>Acciones</th>
+                      <th class="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Jugador</th>
+                      <th class="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Posición</th>
+                      <th class="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Resultado</th>
+                      <th class="px-4 py-2 text-left text-xs font-medium text-gray-300 uppercase tracking-wider">Hora</th>
                     </tr>
                   </thead>
-                  <tbody>
-                    <tr *ngFor="let game of gameDetailsList">
-                      <td>{{ game.name }}</td>
-                      <td>{{ game.opponent }}</td>
-                      <td>{{ game.createdAt | date:'short' }}</td>
-                      <td>
-                        <button class="btn btn-sm btn-primary" (click)="viewGameBoard(game.id)">
-                          👁️ Ver Tablero
-                        </button>
+                  <tbody class="bg-gray-900 divide-y divide-gray-800">
+                    <tr *ngFor="let move of gameMoves.slice().reverse()" class="hover:bg-gray-800">
+                      <td class="px-4 py-2 whitespace-nowrap text-sm text-white">{{ move.player }}</td>
+                      <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-300">{{ move.position }}</td>
+                      <td class="px-4 py-2 whitespace-nowrap text-sm">
+                        <span [class]="move.hit ? 'text-green-400 font-bold' : 'text-blue-400 font-bold'">
+                          {{ move.hit ? '🎯 Impacto' : '💧 Agua' }}
+                        </span>
                       </td>
+                      <td class="px-4 py-2 whitespace-nowrap text-sm text-gray-400">{{ move.createdAt | date:'short' }}</td>
                     </tr>
                   </tbody>
                 </table>
@@ -341,173 +415,26 @@ import { Subscription } from 'rxjs';
         </div>
       </div>
     </div>
-
-    <!-- Modal de Tablero Final -->
-    <div class="modal fade" id="boardModal" tabindex="-1">
-      <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">🎯 Tablero Final - {{ selectedGame?.name }}</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
-          </div>
-          <div class="modal-body">
-                         <div *ngIf="selectedGame && gameBoardState">
-               <div class="row">
-                 <div class="col-md-6">
-                   <h6>Tablero de {{ gameBoardState.player1Username }}</h6>
-                   <div class="board-container">
-                     <div class="board-row" *ngFor="let row of gameBoardState.player1Board; let i = index">
-                       <div class="board-cell" 
-                            *ngFor="let cell of row; let j = index"
-                            [class.hit]="cell === 'hit'"
-                            [class.miss]="cell === 'miss'"
-                            [class.ship]="cell === 'ship'">
-                         {{ getCellDisplay(cell) }}
-                       </div>
-                     </div>
-                   </div>
-                 </div>
-                 <div class="col-md-6">
-                   <h6>Tablero de {{ gameBoardState.player2Username }}</h6>
-                   <div class="board-container">
-                     <div class="board-row" *ngFor="let row of gameBoardState.player2Board; let i = index">
-                       <div class="board-cell" 
-                            *ngFor="let cell of row; let j = index"
-                            [class.hit]="cell === 'hit'"
-                            [class.miss]="cell === 'miss'"
-                            [class.ship]="cell === 'ship'">
-                         {{ getCellDisplay(cell) }}
-                       </div>
-                     </div>
-                   </div>
-                 </div>
-                              </div>
-               
-               <!-- Leyenda -->
-               <div class="row mt-3">
-                 <div class="col-12">
-                   <div class="card">
-                     <div class="card-header">
-                       <h6>📋 Leyenda</h6>
-                     </div>
-                     <div class="card-body">
-                       <div class="row text-center">
-                         <div class="col-md-3">
-                           <span class="badge bg-success p-2">🚢</span>
-                           <small class="d-block">Barco</small>
-                         </div>
-                         <div class="col-md-3">
-                           <span class="badge bg-danger p-2">🎯</span>
-                           <small class="d-block">Impacto</small>
-                         </div>
-                         <div class="col-md-3">
-                           <span class="badge bg-secondary p-2">💧</span>
-                           <small class="d-block">Agua</small>
-                         </div>
-                         <div class="col-md-3">
-                           <span class="badge bg-info p-2">🌊</span>
-                           <small class="d-block">Mar</small>
-                         </div>
-                       </div>
-                     </div>
-                   </div>
-                 </div>
-               </div>
-               
-               <!-- Movimientos -->
-               <div class="mt-4">
-                <h6>📋 Historial de Movimientos</h6>
-                <div class="table-responsive">
-                  <table class="table table-sm">
-                    <thead>
-                      <tr>
-                        <th>Jugador</th>
-                        <th>Posición</th>
-                        <th>Resultado</th>
-                        <th>Hora</th>
-                      </tr>
-                    </thead>
-                    <tbody>
-                      <tr *ngFor="let move of gameMoves">
-                        <td>{{ move.player }}</td>
-                        <td>{{ move.position }}</td>
-                        <td>
-                          <span [class]="move.hit ? 'text-success' : 'text-muted'">
-                            {{ move.hit ? '🎯 Impacto' : '💧 Agua' }}
-                          </span>
-                        </td>
-                        <td>{{ move.createdAt | date:'short' }}</td>
-                      </tr>
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
   `,
   styles: [`
-    .list-group-item.active {
-      background-color: #007bff;
-      border-color: #007bff;
-    }
-    
-    .card {
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-    
-    .stats-chart {
-      max-height: 150px;
-    }
-
-    .board-container {
-      display: inline-block;
-      border: 2px solid #333;
-      background-color: #f8f9fa;
-      margin: 10px;
-    }
-
-    .board-row {
-      display: flex;
-    }
-
-    .board-cell {
-      width: 35px;
-      height: 35px;
-      border: 1px solid #ccc;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 14px;
-      cursor: default;
-      background-color: #e9ecef;
-    }
-
-    .board-cell.hit {
-      background-color: #dc3545;
-      color: white;
-      border-color: #c82333;
-    }
-
-    .board-cell.miss {
-      background-color: #6c757d;
-      color: white;
-      border-color: #545b62;
-    }
-
-    .board-cell.ship {
-      background-color: #28a745;
-      color: white;
-      border-color: #1e7e34;
-    }
-
-    .board-cell.water {
-      background-color: #17a2b8;
-      color: white;
-      border-color: #138496;
-    }
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap');
+:host {
+  font-family: 'Inter', sans-serif;
+}
+.transition-all {
+  transition: all 0.2s ease-in-out;
+}
+.backdrop-blur-sm {
+  backdrop-filter: blur(8px);
+}
+@keyframes waveUpDown {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(20px); }
+  100% { transform: translateY(0); }
+}
+.animate-wave-updown {
+  animation: waveUpDown 4s ease-in-out infinite;
+}
   `]
 })
 export class DashboardComponent implements OnInit, OnDestroy {
@@ -523,15 +450,18 @@ export class DashboardComponent implements OnInit, OnDestroy {
   gameDetailsList: any[] = [];
   selectedGame: any = null;
   gameBoardState: any = null;
-  gameMoves: any[] = [];
-  
+    gameMoves: any[] = [];
+  showStatsModal = false;
+  showGameDetailsModal = false;
+  showBoardModal = false;
+
   private subscriptions: Subscription[] = [];
+  private waitingGamePolling: Subscription | null = null;
 
   constructor(
     private authService: AuthService,
     private gameService: GameService,
-    private router: Router,
-    private modalService: NgbModal
+    private router: Router
   ) {}
 
   ngOnInit(): void {
@@ -548,6 +478,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.subscriptions.forEach(sub => sub.unsubscribe());
+    if (this.waitingGamePolling) this.waitingGamePolling.unsubscribe();
   }
 
   setActiveSection(section: 'games' | 'create' | 'active'): void {
@@ -614,15 +545,35 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   joinGame(gameId: number): void {
     if (!this.currentUser) return;
-    
     this.gameService.joinGame(gameId, this.currentUser.id).subscribe({
       next: (response) => {
         if (response.success) {
-          this.router.navigate(['/game', gameId]);
+          // Si el juego ya está activo, navegar de inmediato
+          if (response.shouldRedirect || response.gamePlayer?.isCurrentTurn !== undefined) {
+            this.router.navigate(['/game', gameId]);
+          } else {
+            // Si el juego está en espera, iniciar polling para detectar cuando se active
+            this.startWaitingGamePolling(gameId);
+          }
         }
       },
       error: (error) => {
         console.error('Error joining game:', error);
+      }
+    });
+  }
+
+  private startWaitingGamePolling(gameId: number): void {
+    if (this.waitingGamePolling) this.waitingGamePolling.unsubscribe();
+    this.waitingGamePolling = this.gameService.pollGameState(gameId, this.currentUser!.id, 2000).subscribe({
+      next: (response) => {
+        if (response.success && response.gameState.game.status === 'active') {
+          this.waitingGamePolling?.unsubscribe();
+          this.router.navigate(['/game', gameId]);
+        }
+      },
+      error: (error) => {
+        console.error('Error polling waiting game:', error);
       }
     });
   }
@@ -636,20 +587,14 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   showStats(): void {
-    console.log('showStats() called');
     this.loadStats();
-    // Abrir modal de estadísticas usando Bootstrap
-    const modal = document.getElementById('statsModal');
-    console.log('Modal element:', modal);
-    if (modal) {
-      const bootstrapModal = new (window as any).bootstrap.Modal(modal);
-      console.log('Bootstrap modal instance:', bootstrapModal);
-      bootstrapModal.show();
-      // Crear gráfica después de que el modal se abra
-      setTimeout(() => this.createStatsChart(), 100);
-    } else {
-      console.error('Modal element not found');
-    }
+    this.showStatsModal = true;
+    // Crear gráfica después de que el modal se abra
+    setTimeout(() => this.createStatsChart(), 100);
+  }
+
+  closeStatsModal(): void {
+    this.showStatsModal = false;
   }
 
   getWinRate(): number {
@@ -705,11 +650,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   openGameDetailsModal(): void {
-    const modal = document.getElementById('gameDetailsModal');
-    if (modal) {
-      const bootstrapModal = new (window as any).bootstrap.Modal(modal);
-      bootstrapModal.show();
-    }
+    this.showGameDetailsModal = true;
+  }
+
+  closeGameDetailsModal(): void {
+    this.showGameDetailsModal = false;
   }
 
   viewGameBoard(gameId: number): void {
@@ -742,11 +687,11 @@ export class DashboardComponent implements OnInit, OnDestroy {
   }
 
   openBoardModal(): void {
-    const modal = document.getElementById('boardModal');
-    if (modal) {
-      const bootstrapModal = new (window as any).bootstrap.Modal(modal);
-      bootstrapModal.show();
-    }
+    this.showBoardModal = true;
+  }
+
+  closeBoardModal(): void {
+    this.showBoardModal = false;
   }
 
   getCellDisplay(cell: string): string {

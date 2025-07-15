@@ -1,8 +1,7 @@
-import { Component, OnInit, OnDestroy } from '@angular/core';
+import { Component, OnInit, OnDestroy, ViewChild, ElementRef, AfterViewChecked } from '@angular/core';
 import { CommonModule } from '@angular/common';
 import { ActivatedRoute, Router } from '@angular/router';
 import { FormsModule } from '@angular/forms';
-import { NgbAlert, NgbModal } from '@ng-bootstrap/ng-bootstrap';
 import { AuthService, User } from '../../services/auth.service';
 import { GameService, GameState, MoveResult } from '../../services/game.service';
 import { GameBoardComponent } from '../game-board/game-board.component';
@@ -11,131 +10,151 @@ import { Subscription } from 'rxjs';
 @Component({
   selector: 'app-game',
   standalone: true,
-  imports: [CommonModule, FormsModule, NgbAlert, GameBoardComponent],
+  imports: [CommonModule, FormsModule, GameBoardComponent],
   template: `
-    <div class="container-fluid">
+    <div class="min-h-screen bg-gradient-to-br from-gray-900 via-gray-800 to-black">
       <!-- Header del Juego -->
-      <div class="row bg-dark text-white p-3">
-        <div class="col-md-8">
-          <h3>🎮 {{ gameState?.game?.name || 'Juego Naval' }}</h3>
-          <p class="mb-0">
-            Estado: {{ getGameStatusText() }} | 
-            {{ currentUser?.username }} vs {{ gameState?.opponent?.username }}
-          </p>
-        </div>
-        <div class="col-md-4 text-end">
-          <button class="btn btn-outline-light me-2" (click)="showGameHistory()">
-            📋 Historial
-          </button>
-          <button class="btn btn-outline-light" (click)="backToDashboard()">
-            🏠 Dashboard
-          </button>
-        </div>
-      </div>
-
-      <!-- Estado del Juego -->
-      <div class="row mt-3">
-        <div class="col-12">
-          <div class="alert" [class.alert-info]="!isMyTurn" [class.alert-success]="isMyTurn">
-            <strong>{{ getTurnMessage() }}</strong>
-            <span *ngIf="gameState">
-              | Barcos restantes: Tú ({{ gameState.currentPlayer.shipsRemaining }}) - 
-              {{ gameState.opponent.username }} ({{ gameState.opponent.shipsRemaining }})
-            </span>
+      <div class="bg-gradient-to-r from-gray-800 to-gray-900 text-white p-6 shadow-lg">
+        <div class="max-w-7xl mx-auto">
+          <div class="flex flex-col md:flex-row justify-between items-start md:items-center">
+            <div>
+              <h3 class="text-2xl font-bold mb-2">🎮 {{ gameState?.game?.name || 'Juego Naval' }}</h3>
+              <p class="text-gray-300">
+                Estado: {{ getGameStatusText() }} | 
+                {{ currentUser?.username }} vs {{ gameState?.opponent?.username }}
+              </p>
+            </div>
+            <div class="flex space-x-3 mt-4 md:mt-0">
+              <button class="bg-white/20 hover:bg-white/30 text-white px-4 py-2 rounded-full transition-all duration-200 flex items-center space-x-2" (click)="showGameHistory()">
+                <span>📋</span>
+                <span>Historial</span>
+              </button>
+              <button class="bg-white/20 hover:bg-red-700 text-white px-4 py-2 rounded-full transition-all duration-200 flex items-center space-x-2" (click)="abandonarPartida()">
+                <span>🚪</span>
+                <span>Abandonar partida</span>
+              </button>
+            </div>
           </div>
         </div>
       </div>
 
-      <!-- Tableros -->
-      <div class="row mt-4" *ngIf="gameState">
-        <!-- Tablero del Jugador -->
-        <div class="col-md-6">
-          <app-game-board
-            [board]="gameState.currentPlayer.board"
-            [title]="'Tu Tablero - ' + currentUser?.username"
-            [isOpponent]="false"
-            [disabled]="true">
-          </app-game-board>
-        </div>
-
-        <!-- Tablero del Oponente -->
-        <div class="col-md-6">
-          <app-game-board
-            [board]="gameState.opponent.board"
-            [title]="'Tablero de ' + gameState.opponent.username"
-            [isOpponent]="true"
-            [disabled]="!isMyTurn || gameState.game.status === 'finished'"
-            (cellClick)="onOpponentCellClick($event)">
-          </app-game-board>
-        </div>
-      </div>
-
-      <!-- Mensajes de Resultado -->
-      <div class="row mt-3" *ngIf="lastMoveResult">
-        <div class="col-12">
-          <ngb-alert [type]="lastMoveResult.hit ? 'success' : 'info'" (closed)="lastMoveResult = null">
-            <strong>{{ lastMoveResult.hit ? '🎯 ¡Impacto!' : '💧 Agua' }}</strong>
-            <span *ngIf="lastMoveResult.shipDestroyed"> - ¡Barco destruido!</span>
-          </ngb-alert>
-        </div>
-      </div>
-
-      <!-- Resultado Final -->
-      <div class="row mt-3" *ngIf="gameState?.game?.status === 'finished'">
-        <div class="col-12">
-          <div class="alert" [class.alert-success]="isWinner" [class.alert-danger]="!isWinner">
-            <h4 class="alert-heading">
-              {{ isWinner ? '🏆 ¡Victoria!' : '😔 Derrota' }}
-            </h4>
-            <p>
-              {{ isWinner ? '¡Felicidades! Has hundido todos los barcos de tu oponente.' : 
-                         'Tu oponente ha hundido todos tus barcos.' }}
-            </p>
-            <button class="btn btn-primary" (click)="backToDashboard()">
-              Volver al Dashboard
-            </button>
+      <div class="max-w-7xl mx-auto p-6">
+        <!-- Estado del Juego -->
+        <div class="mb-6">
+          <div [class]="isMyTurn ? 'bg-green-900/60 border-green-400 text-green-200' : 'bg-blue-900/60 border-blue-400 text-blue-200'" 
+               class="border rounded-xl p-4 shadow-sm">
+            <div class="flex items-center space-x-2">
+              <span class="text-lg">{{ isMyTurn ? '🎯' : '⏳' }}</span>
+              <div>
+                <strong class="text-lg">{{ getTurnMessage() }}</strong>
+                <span *ngIf="gameState" class="block text-sm mt-1">
+                  Barcos restantes: Tú ({{ gameState.currentPlayer.shipsRemaining }}) - 
+                  {{ gameState.opponent.username }} ({{ gameState.opponent.shipsRemaining }})
+                </span>
+              </div>
+            </div>
           </div>
         </div>
-      </div>
 
-      <!-- Loading -->
-      <div class="row mt-4" *ngIf="loading">
-        <div class="col-12 text-center">
-          <div class="spinner-border" role="status">
-            <span class="visually-hidden">Cargando...</span>
+        <!-- Tableros -->
+        <div *ngIf="gameState" class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-6">
+          <!-- Tablero del Jugador -->
+          <div class="bg-gray-900/80 rounded-xl shadow-lg p-6">
+            <app-game-board
+              [board]="gameState.currentPlayer.board"
+              [title]="'Tu Tablero - ' + currentUser?.username"
+              [isOpponent]="false"
+              [disabled]="true">
+            </app-game-board>
           </div>
-          <p class="mt-2">Cargando juego...</p>
+
+          <!-- Tablero del Oponente -->
+          <div class="bg-gray-900/80 rounded-xl shadow-lg p-6">
+            <app-game-board
+              [board]="gameState.opponent.board"
+              [title]="'Tablero de ' + gameState.opponent.username"
+              [isOpponent]="true"
+              [disabled]="!isMyTurn || gameState.game.status === 'finished'"
+              (cellClick)="onOpponentCellClick($event)">
+            </app-game-board>
+          </div>
+        </div>
+
+        <!-- Mensajes de Resultado -->
+        <div *ngIf="lastMoveResult" class="mb-6">
+          <div [class]="lastMoveResult.hit ? 'bg-green-900/60 border-green-400 text-green-200' : 'bg-blue-900/60 border-blue-400 text-blue-200'" 
+               class="border rounded-xl p-4 shadow-sm">
+            <div class="flex justify-between items-center">
+              <div class="flex items-center space-x-2">
+                <span class="text-xl">{{ lastMoveResult.hit ? '🎯' : '💧' }}</span>
+                <div>
+                  <strong class="text-lg">{{ lastMoveResult.hit ? '¡Impacto!' : 'Agua' }}</strong>
+                  <span *ngIf="lastMoveResult.shipDestroyed" class="block text-sm">¡Barco destruido!</span>
+                </div>
+              </div>
+              <button class="text-gray-400 hover:text-white transition-colors" (click)="lastMoveResult = null">
+                <svg class="w-5 h-5" fill="currentColor" viewBox="0 0 20 20">
+                  <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+                </svg>
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Resultado Final -->
+        <div *ngIf="gameState?.game?.status === 'finished'" class="mb-6">
+          <div [class]="isWinner ? 'bg-green-900/60 border-green-400 text-green-200' : 'bg-red-900/60 border-red-400 text-red-200'" 
+               class="border rounded-xl p-6 shadow-lg">
+            <div class="text-center">
+              <div class="text-4xl mb-4">{{ isWinner ? '🏆' : '😔' }}</div>
+              <h4 class="text-2xl font-bold mb-4">
+                {{ isWinner ? '¡Victoria!' : 'Derrota' }}
+              </h4>
+              <p class="text-lg mb-6">
+                {{ isWinner ? getVictoryMessage() : 'Tu oponente ha hundido todos tus barcos.' }}
+              </p>
+              <button #dashboardBtn class="bg-blue-600 hover:bg-blue-700 text-white px-8 py-3 rounded-lg transition-all duration-200 text-lg font-medium" (click)="backToDashboard()">
+                Volver al Dashboard
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Loading -->
+        <div *ngIf="loading" class="text-center py-12">
+          <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-blue-600 mb-4"></div>
+          <p class="text-white text-lg">Cargando juego...</p>
         </div>
       </div>
     </div>
 
     <!-- Modal de Historial -->
-    <div class="modal fade" id="historyModal" tabindex="-1">
-      <div class="modal-dialog modal-lg">
-        <div class="modal-content">
-          <div class="modal-header">
-            <h5 class="modal-title">📋 Historial de Movimientos</h5>
-            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+    <div *ngIf="showHistoryModal" class="fixed inset-0 bg-black bg-opacity-60 flex items-center justify-center p-4 z-50">
+      <div class="bg-gray-900 rounded-2xl shadow-2xl max-w-4xl w-full max-h-[90vh] overflow-y-auto border-2 border-gray-700">
+        <div class="bg-gradient-to-r from-gray-800 via-gray-900 to-black px-6 py-4 border-b border-gray-700 flex justify-between items-center rounded-t-2xl">
+          <h5 class="text-xl font-bold text-white drop-shadow flex items-center gap-2">📋 Historial de Movimientos</h5>
+          <button class="text-white hover:text-red-400 transition-colors rounded-full p-1" (click)="closeHistoryModal()">
+            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 20 20">
+              <path fill-rule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clip-rule="evenodd"></path>
+            </svg>
+          </button>
+        </div>
+        <div class="p-6">
+          <div *ngIf="gameMoves.length === 0" class="text-center py-8">
+            <p class="text-gray-300 text-lg">No hay movimientos registrados</p>
           </div>
-          <div class="modal-body">
-            <div *ngIf="gameMoves.length === 0" class="text-center">
-              <p>No hay movimientos registrados</p>
-            </div>
-            <div *ngFor="let move of gameMoves" class="mb-2">
-              <div class="card">
-                <div class="card-body">
-                  <div class="d-flex justify-content-between align-items-center">
-                    <span>
-                      <strong>{{ move.player }}</strong> disparó a 
-                      <strong>{{ move.position }}</strong>
-                    </span>
-                    <span [class]="move.hit ? 'text-success' : 'text-muted'">
-                      {{ move.hit ? '🎯 Impacto' : '💧 Agua' }}
-                    </span>
-                  </div>
-                  <small class="text-muted">{{ move.createdAt | date:'short' }}</small>
-                </div>
+          <div *ngFor="let move of gameMoves" class="mb-4">
+            <div class="bg-gray-800 rounded-xl p-4 hover:shadow-lg transition-all duration-200 border border-gray-700">
+              <div class="flex justify-between items-center mb-2">
+                <span class="text-white">
+                  <strong>{{ move.player }}</strong> disparó a 
+                  <strong>{{ move.position }}</strong>
+                </span>
+                <span [class]="move.hit ? 'text-green-400 font-bold' : 'text-blue-400 font-bold'" class="font-medium">
+                  {{ move.hit ? '🎯 Impacto' : '💧 Agua' }}
+                </span>
               </div>
+              <small class="text-gray-400">{{ move.createdAt | date:'short' }}</small>
             </div>
           </div>
         </div>
@@ -143,21 +162,25 @@ import { Subscription } from 'rxjs';
     </div>
   `,
   styles: [`
-    .alert {
-      border-radius: 8px;
+    /* Estilos personalizados para el juego */
+    .fade-in {
+      animation: fadeIn 0.3s ease-in;
     }
-    
-    .card {
-      box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(10px); }
+      to { opacity: 1; transform: translateY(0); }
     }
-    
-    .spinner-border {
-      width: 3rem;
-      height: 3rem;
+
+    /* Transiciones suaves */
+    .transition-all {
+      transition-property: all;
+      transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+      transition-duration: 200ms;
     }
   `]
 })
-export class GameComponent implements OnInit, OnDestroy {
+export class GameComponent implements OnInit, OnDestroy, AfterViewChecked {
   gameId: number = 0;
   currentUser: User | null = null;
   gameState: GameState | null = null;
@@ -166,16 +189,18 @@ export class GameComponent implements OnInit, OnDestroy {
   loading = true;
   isMyTurn = false;
   isWinner = false;
+  showHistoryModal = false;
   
   private subscriptions: Subscription[] = [];
   private pollingSubscription: Subscription | null = null;
+  @ViewChild('dashboardBtn') dashboardBtn!: ElementRef<HTMLButtonElement>;
+  private shouldFocusDashboardBtn = false;
 
   constructor(
     private route: ActivatedRoute,
     private router: Router,
     private authService: AuthService,
-    private gameService: GameService,
-    private modalService: NgbModal
+    private gameService: GameService
   ) {}
 
   ngOnInit(): void {
@@ -200,6 +225,13 @@ export class GameComponent implements OnInit, OnDestroy {
     this.subscriptions.forEach(sub => sub.unsubscribe());
     if (this.pollingSubscription) {
       this.pollingSubscription.unsubscribe();
+    }
+  }
+
+  ngAfterViewChecked(): void {
+    if (this.shouldFocusDashboardBtn && this.dashboardBtn) {
+      this.dashboardBtn.nativeElement.focus();
+      this.shouldFocusDashboardBtn = false;
     }
   }
 
@@ -293,22 +325,40 @@ export class GameComponent implements OnInit, OnDestroy {
   checkGameEnd(): void {
     if (this.gameState?.game.status === 'finished') {
       this.isWinner = this.gameState.game.winnerId === this.currentUser?.id;
-      
       // Detener polling cuando el juego termina
       if (this.pollingSubscription) {
         this.pollingSubscription.unsubscribe();
         this.pollingSubscription = null;
       }
+      this.shouldFocusDashboardBtn = true;
     }
   }
 
   showGameHistory(): void {
     this.loadGameMoves();
-    // Aquí podrías abrir un modal con el historial detallado
+    this.showHistoryModal = true;
+  }
+
+  closeHistoryModal(): void {
+    this.showHistoryModal = false;
   }
 
   backToDashboard(): void {
     this.router.navigate(['/dashboard']);
+  }
+
+  abandonarPartida(): void {
+    if (!confirm('¿Seguro que quieres abandonar la partida? Esto contará como derrota y tu rival será notificado.')) return;
+    if (!this.currentUser) return;
+    this.gameService.surrenderGame(this.gameId, this.currentUser.id).subscribe({
+      next: (response) => {
+        this.router.navigate(['/dashboard']);
+      },
+      error: (error) => {
+        alert('Error al abandonar la partida.');
+        console.error('Error al rendirse:', error);
+      }
+    });
   }
 
   getGameStatusText(): string {
@@ -330,5 +380,15 @@ export class GameComponent implements OnInit, OnDestroy {
     }
     
     return this.isMyTurn ? '🎯 Es tu turno - Haz clic en el tablero del oponente' : '⏳ Esperando turno del oponente';
+  }
+
+  getVictoryMessage(): string {
+    if (!this.gameState) return '';
+    // Buscar si el último movimiento fue una rendición
+    const surrenderMove = this.gameMoves.find(m => m.position === 'SUR' && m.player !== this.currentUser?.username);
+    if (surrenderMove) {
+      return '¡El rival abandonó la partida!';
+    }
+    return '¡Felicidades! Has ganado la partida.';
   }
 } 

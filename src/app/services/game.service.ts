@@ -135,4 +135,9 @@ export class GameService {
       switchMap(() => this.getGames())
     );
   }
+
+  // Rendirse o abandonar una partida
+  surrenderGame(gameId: number, userId: number): Observable<any> {
+    return this.http.post(`${this.apiUrl}/games/${gameId}/surrender`, { userId });
+  }
 } 
