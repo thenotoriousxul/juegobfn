@@ -12,11 +12,13 @@ export class AuthGuard implements CanActivate {
   ) {}
 
   canActivate(): boolean {
-    const currentUser = this.authService.getCurrentUser();
-    if (currentUser) {
+    // Verificar la validez de la sesión antes de permitir acceso
+    const isSessionValid = this.authService.validateSession();
+    
+    if (isSessionValid) {
       return true;
     } else {
-      this.router.navigate(['/auth']);
+      // La sesión no es válida, el AuthService ya maneja la redirección
       return false;
     }
   }

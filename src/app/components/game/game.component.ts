@@ -21,7 +21,7 @@ import { Subscription } from 'rxjs';
               <h3 class="text-2xl font-bold mb-2">🎮 {{ gameState?.game?.name || 'Juego Naval' }}</h3>
               <p class="text-gray-300">
                 Estado: {{ getGameStatusText() }} | 
-                {{ currentUser?.username }} vs {{ gameState?.opponent?.username }}
+                {{ currentUser?.username }} vs {{ getOpponentName() }}
               </p>
             </div>
             <div class="flex space-x-3 mt-4 md:mt-0">
@@ -31,7 +31,7 @@ import { Subscription } from 'rxjs';
               </button>
               <button class="bg-white/20 hover:bg-red-700 text-white px-4 py-2 rounded-full transition-all duration-200 flex items-center space-x-2" (click)="abandonarPartida()">
                 <span>🚪</span>
-                <span>Abandonar partida</span>
+                <span>{{ gameState?.waiting ? 'Cancelar juego' : 'Abandonar partida' }}</span>
               </button>
             </div>
           </div>
@@ -47,17 +47,33 @@ import { Subscription } from 'rxjs';
               <span class="text-lg">{{ isMyTurn ? '🎯' : '⏳' }}</span>
               <div>
                 <strong class="text-lg">{{ getTurnMessage() }}</strong>
-                <span *ngIf="gameState" class="block text-sm mt-1">
+                <span *ngIf="gameState && !gameState.waiting && gameState.opponent" class="block text-sm mt-1">
                   Barcos restantes: Tú ({{ gameState.currentPlayer.shipsRemaining }}) - 
                   {{ gameState.opponent.username }} ({{ gameState.opponent.shipsRemaining }})
+                </span>
+                <span *ngIf="gameState?.waiting" class="block text-sm mt-1">
+                  Esperando a que se una otro jugador...
                 </span>
               </div>
             </div>
           </div>
         </div>
 
+        <!-- Mensaje de espera -->
+        <div *ngIf="gameState?.waiting" class="text-center py-12">
+          <div class="bg-yellow-900/60 border-yellow-400 text-yellow-200 border rounded-xl p-8 shadow-lg">
+            <div class="text-6xl mb-4">⏳</div>
+            <h3 class="text-2xl font-bold mb-4">Esperando jugadores</h3>
+            <p class="text-lg mb-4">Tu sala está creada y lista. Comparte el código del juego para que otros se unan.</p>
+            <div class="bg-yellow-800/50 rounded-lg p-4 mb-4">
+              <p class="text-sm">ID del Juego: <strong class="text-xl">{{ gameId }}</strong></p>
+            </div>
+            <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-yellow-400"></div>
+          </div>
+        </div>
+
         <!-- Tableros -->
-        <div *ngIf="gameState" class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-6">
+        <div *ngIf="gameState && !gameState.waiting" class="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-6">
           <!-- Tablero del Jugador -->
           <div class="bg-gray-900/80 rounded-xl shadow-lg p-6">
             <app-game-board
@@ -71,8 +87,8 @@ import { Subscription } from 'rxjs';
           <!-- Tablero del Oponente -->
           <div class="bg-gray-900/80 rounded-xl shadow-lg p-6">
             <app-game-board
-              [board]="gameState.opponent.board"
-              [title]="'Tablero de ' + gameState.opponent.username"
+              [board]="gameState.opponent?.board || []"
+              [title]="'Tablero de ' + (gameState.opponent?.username || 'Oponente')"
               [isOpponent]="true"
               [disabled]="!isMyTurn || gameState.game.status === 'finished'"
               (cellClick)="onOpponentCellClick($event)">
@@ -348,21 +364,49 @@ export class GameComponent implements OnInit, OnDestroy, AfterViewChecked {
   }
 
   abandonarPartida(): void {
-    if (!confirm('¿Seguro que quieres abandonar la partida? Esto contará como derrota y tu rival será notificado.')) return;
     if (!this.currentUser) return;
+    
+    const isWaiting = this.gameState?.waiting;
+    const confirmMessage = isWaiting 
+      ? '¿Estás seguro de que quieres cancelar este juego?' 
+      : '¿Seguro que quieres abandonar la partida? Esto contará como derrota y tu rival será notificado.';
+    
+    if (!confirm(confirmMessage)) return;
+    
     this.gameService.surrenderGame(this.gameId, this.currentUser.id).subscribe({
       next: (response) => {
-        this.router.navigate(['/dashboard']);
+        if (response.success) {
+          // Mostrar mensaje apropiado según el tipo de acción
+          if (response.result?.gameCanceled) {
+            alert('Juego cancelado exitosamente');
+          } else if (response.result?.leftGame) {
+            alert('Has salido del juego');
+          } else {
+            alert('Te has rendido. El juego ha terminado.');
+          }
+          
+          this.router.navigate(['/dashboard']);
+        } else {
+          alert('Error: ' + (response.message || 'No se pudo abandonar el juego'));
+        }
       },
       error: (error) => {
-        alert('Error al abandonar la partida.');
         console.error('Error al rendirse:', error);
+        
+        // Mostrar mensaje de error más específico
+        if (error.error?.message) {
+          alert('Error: ' + error.error.message);
+        } else {
+          alert('Error al abandonar el juego. Por favor intenta nuevamente.');
+        }
       }
     });
   }
 
   getGameStatusText(): string {
     if (!this.gameState) return 'Cargando...';
+    
+    if (this.gameState.waiting) return 'Esperando jugadores';
     
     switch (this.gameState.game.status) {
       case 'waiting': return 'Esperando jugadores';
@@ -372,8 +416,16 @@ export class GameComponent implements OnInit, OnDestroy, AfterViewChecked {
     }
   }
 
+  getOpponentName(): string {
+    if (!this.gameState) return '...';
+    if (this.gameState.waiting || !this.gameState.opponent) return 'Esperando...';
+    return this.gameState.opponent.username;
+  }
+
   getTurnMessage(): string {
     if (!this.gameState) return 'Cargando...';
+    
+    if (this.gameState.waiting) return 'Esperando jugadores...';
     
     if (this.gameState.game.status === 'finished') {
       return this.isWinner ? '¡Juego terminado! ¡Has ganado!' : '¡Juego terminado! Has perdido.';

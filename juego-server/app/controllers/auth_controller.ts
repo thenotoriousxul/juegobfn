@@ -106,6 +106,12 @@ export default class AuthController {
         })
       }
 
+      // Generar token de acceso
+      const token = await User.accessTokens.create(user, ['*'], {
+        name: 'api_token',
+        expiresIn: '30 days'
+      })
+
       return response.json({
         success: true,
         message: 'Inicio de sesión exitoso',
@@ -115,6 +121,10 @@ export default class AuthController {
           email: user.email,
           gamesWon: user.gamesWon,
           gamesLost: user.gamesLost
+        },
+        token: {
+          type: 'Bearer',
+          value: token.value!.release()
         }
       })
     } catch (error) {
@@ -122,6 +132,30 @@ export default class AuthController {
       return response.status(500).json({
         success: false,
         message: 'Error interno del servidor al iniciar sesión'
+      })
+    }
+  }
+
+  /**
+   * Cerrar sesión (invalidar token)
+   */
+  async logout({ auth, response }: HttpContext) {
+    try {
+      const user = auth.getUserOrFail()
+      const token = auth.user?.currentAccessToken
+
+      if (token) {
+        await User.accessTokens.delete(user, token.identifier)
+      }
+
+      return response.json({
+        success: true,
+        message: 'Sesión cerrada exitosamente'
+      })
+    } catch (error) {
+      return response.status(500).json({
+        success: false,
+        message: 'Error al cerrar sesión'
       })
     }
   }

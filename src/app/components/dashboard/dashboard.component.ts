@@ -126,11 +126,47 @@ import { Subscription } from 'rxjs';
                             <span class="font-medium">Estado:</span> {{ getStatusText(game.status) }}
                           </p>
                         </div>
-                        <button class="w-full bg-green-700 hover:bg-green-800 disabled:bg-gray-600 text-white px-4 py-2 rounded-lg transition-all duration-200" 
-                                [disabled]="game.playerCount >= 2"
-                                (click)="joinGame(game.id)">
-                          {{ game.playerCount >= 2 ? 'Lleno' : 'Unirse' }}
-                        </button>
+                        <!-- Botones dinámicos según el estado del juego -->
+                        
+                        <!-- Si soy el creador y está 1/2 (esperando otro jugador) -->
+                        <div class="flex space-x-2" *ngIf="isGameCreator(game) && game.playerCount === 1">
+                          <button class="flex-1 bg-yellow-600 hover:bg-yellow-700 text-white px-4 py-2 rounded-lg transition-all duration-200 flex items-center justify-center space-x-2">
+                            <span>⏳</span>
+                            <span>Esperando...</span>
+                          </button>
+                          <button class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-all duration-200 flex items-center justify-center" 
+                                  (click)="cancelGame(game.id)" 
+                                  title="Cancelar juego">
+                            <span>❌</span>
+                          </button>
+                        </div>
+                        
+                        <!-- Si no soy el creador y puedo unirme (1/2) -->
+                        <div *ngIf="!isGameCreator(game) && canUserJoinGame(game)">
+                          <button class="w-full bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded-lg transition-all duration-200 flex items-center justify-center space-x-2" 
+                                  (click)="joinGame(game.id)">
+                            <span>🚀</span>
+                            <span>Unirse</span>
+                          </button>
+                        </div>
+                        
+                        <!-- Si ya estoy en el juego y está lleno (2/2) - puedo continuar -->
+                        <div *ngIf="canJoinFullGame(game)">
+                          <button class="w-full bg-blue-700 hover:bg-blue-800 text-white px-4 py-2 rounded-lg transition-all duration-200 flex items-center justify-center space-x-2" 
+                                  (click)="joinGame(game.id)">
+                            <span>🎮</span>
+                            <span>Continuar Juego</span>
+                          </button>
+                        </div>
+                        
+                        <!-- Si el juego está lleno y no estoy en él -->
+                        <div *ngIf="game.playerCount >= 2 && !isUserInGame(game)">
+                          <button class="w-full bg-gray-600 text-white px-4 py-2 rounded-lg cursor-not-allowed flex items-center justify-center space-x-2" 
+                                  disabled>
+                            <span>🔒</span>
+                            <span>Juego Lleno</span>
+                          </button>
+                        </div>
                       </div>
                     </div>
                   </div>
@@ -167,19 +203,46 @@ import { Subscription } from 'rxjs';
               <!-- Juegos Activos -->
               <div *ngIf="activeSection === 'active'">
                 <div class="bg-gray-900/70 rounded-xl shadow-lg overflow-hidden border border-gray-700">
-                  <div class="px-6 py-4 border-b border-gray-800">
+                  <div class="px-6 py-4 border-b border-gray-800 flex justify-between items-center">
                     <h5 class="text-lg font-semibold text-white">⚡ Juegos Activos</h5>
+                    <button class="bg-red-700 hover:bg-red-800 text-white px-4 py-2 rounded-lg transition-all duration-200 flex items-center space-x-2" (click)="loadActiveGames()">
+                      <span>🔄</span>
+                      <span>Actualizar</span>
+                    </button>
                   </div>
                   <div class="p-6">
-                    <div *ngIf="activeGames.length === 0" class="text-center py-8">
-                      <p class="text-white">No tienes juegos activos</p>
+                    <div *ngIf="loading" class="text-center py-8">
+                      <div class="inline-block animate-spin rounded-full h-8 w-8 border-b-2 border-red-600"></div>
+                      <p class="mt-2 text-white">Cargando juegos activos...</p>
                     </div>
-                    <div *ngFor="let game of activeGames" class="bg-gray-800/70 rounded-xl p-6 mb-4 hover:shadow-xl transition-all duration-200 border border-gray-700">
-                      <h6 class="text-lg font-semibold text-white mb-2">{{ game.name }}</h6>
-                      <p class="text-white mb-4">Estado: {{ game.status }}</p>
-                      <button class="bg-red-700 hover:bg-red-800 text-white px-6 py-2 rounded-lg transition-all duration-200" (click)="continueGame(game.id)">
-                        Continuar Juego
-                      </button>
+                    <div *ngIf="!loading && activeGames.length === 0" class="text-center py-8">
+                      <p class="text-white mb-4">No tienes juegos activos</p>
+                      <p class="text-gray-400 text-sm">Los juegos activos son aquellos en los que ya estás participando</p>
+                    </div>
+                    <div *ngIf="!loading && activeGames.length > 0" class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div *ngFor="let game of activeGames" class="bg-gray-800/70 rounded-xl p-6 hover:shadow-xl transition-all duration-200 border border-gray-700">
+                        <h6 class="text-lg font-semibold text-white mb-3">{{ game.name }}</h6>
+                        <div class="space-y-2 mb-4">
+                          <p class="text-sm text-white">
+                            <span class="font-medium">Creado por:</span> {{ game.creator }}
+                          </p>
+                          <p class="text-sm text-white">
+                            <span class="font-medium">Jugadores:</span> {{ game.players.length || 0 }}/2
+                          </p>
+                          <p class="text-sm text-white">
+                            <span class="font-medium">Estado:</span> {{ getStatusText(game.status) }}
+                          </p>
+                        </div>
+                        <div class="flex space-x-3">
+                          <button class="flex-1 bg-green-700 hover:bg-green-800 text-white px-4 py-2 rounded-lg transition-all duration-200 flex items-center justify-center space-x-2" (click)="continueGame(game.id)">
+                            <span>🎮</span>
+                            <span>Continuar Juego</span>
+                          </button>
+                          <button class="bg-red-600 hover:bg-red-700 text-white px-4 py-2 rounded-lg transition-all duration-200 flex items-center justify-center" (click)="abandonGame(game.id)" title="Abandonar juego">
+                            <span>🚪</span>
+                          </button>
+                        </div>
+                      </div>
                     </div>
                   </div>
                 </div>
@@ -221,11 +284,7 @@ import { Subscription } from 'rxjs';
                 <p class="text-gray-100">% Victoria</p>
               </div>
             </div>
-            <!-- Gráfica -->
-            <div class="bg-gray-900 rounded-xl shadow-lg p-6 mb-8 border border-gray-700">
-              <h6 class="text-lg font-semibold text-white mb-4">📈 Distribución de Resultados</h6>
-              <canvas id="statsChart" width="400" height="200"></canvas>
-            </div>
+           
             <!-- Tablas de Juegos -->
             <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
               <div class="bg-gray-900 rounded-xl shadow-lg overflow-hidden border border-gray-700">
@@ -472,6 +531,7 @@ export class DashboardComponent implements OnInit, OnDestroy {
     }
 
     this.loadGames();
+    this.loadActiveGames();
     this.loadStats();
     this.setupPolling();
   }
@@ -485,6 +545,8 @@ export class DashboardComponent implements OnInit, OnDestroy {
     this.activeSection = section;
     if (section === 'games') {
       this.loadGames();
+    } else if (section === 'active') {
+      this.loadActiveGames();
     }
   }
 
@@ -500,6 +562,25 @@ export class DashboardComponent implements OnInit, OnDestroy {
       error: (error) => {
         this.loading = false;
         console.error('Error loading games:', error);
+      }
+    });
+  }
+
+  loadActiveGames(): void {
+    if (!this.currentUser) return;
+    
+    this.loading = true;
+    this.gameService.getActiveGames(this.currentUser.id).subscribe({
+      next: (response) => {
+        this.loading = false;
+        if (response.success) {
+          this.activeGames = response.activeGames;
+          console.log('Active games loaded:', this.activeGames);
+        }
+      },
+      error: (error) => {
+        this.loading = false;
+        console.error('Error loading active games:', error);
       }
     });
   }
@@ -532,13 +613,29 @@ export class DashboardComponent implements OnInit, OnDestroy {
         this.creating = false;
         if (response.success) {
           this.newGameName = '';
-          this.setActiveSection('games');
-          this.loadGames();
+          
+          // Si el backend indica que debe redirigir (creador se unió automáticamente)
+          if (response.shouldRedirect && response.game) {
+            this.router.navigate(['/game', response.game.id]);
+          } else {
+            // Fallback: volver a la lista de juegos
+            this.setActiveSection('games');
+            this.loadGames();
+          }
+        } else {
+          alert('Error al crear el juego: ' + response.message);
         }
       },
       error: (error) => {
         this.creating = false;
         console.error('Error creating game:', error);
+        
+        // Mostrar el mensaje de error específico si está disponible
+        if (error.error && error.error.message) {
+          alert('Error: ' + error.error.message);
+        } else {
+          alert('Error al crear el juego');
+        }
       }
     });
   }
@@ -580,6 +677,70 @@ export class DashboardComponent implements OnInit, OnDestroy {
 
   continueGame(gameId: number): void {
     this.router.navigate(['/game', gameId]);
+  }
+
+  abandonGame(gameId: number): void {
+    if (!this.currentUser) return;
+    
+    if (confirm('¿Estás seguro de que quieres abandonar este juego? Esta acción no se puede deshacer.')) {
+      this.gameService.surrenderGame(gameId, this.currentUser.id).subscribe({
+        next: (response) => {
+          if (response.success) {
+            // Recargar la lista de juegos activos
+            this.loadActiveGames();
+            alert('Has abandonado el juego exitosamente');
+          } else {
+            alert('Error al abandonar el juego: ' + response.message);
+          }
+        },
+        error: (error) => {
+          console.error('Error abandoning game:', error);
+          alert('Error al abandonar el juego');
+        }
+      });
+    }
+  }
+
+  cancelGame(gameId: number): void {
+    if (!this.currentUser) return;
+    
+    if (confirm('¿Estás seguro de que quieres cancelar este juego? Se eliminará permanentemente.')) {
+      this.gameService.cancelGame(gameId, this.currentUser.id).subscribe({
+        next: (response) => {
+          if (response.success) {
+            // Recargar la lista de juegos disponibles
+            this.loadGames();
+            alert('Juego cancelado exitosamente');
+          } else {
+            alert('Error al cancelar el juego: ' + response.message);
+          }
+        },
+        error: (error) => {
+          console.error('Error canceling game:', error);
+          alert('Error al cancelar el juego');
+        }
+      });
+    }
+  }
+
+  // Verificar si el usuario es el creador del juego
+  isGameCreator(game: Game): boolean {
+    return this.currentUser?.id === game.creatorId;
+  }
+
+  // Verificar si el usuario ya está en el juego
+  isUserInGame(game: Game): boolean {
+    return game.players?.some(p => p.id === this.currentUser?.id) || false;
+  }
+
+  // Verificar si el usuario puede unirse al juego
+  canUserJoinGame(game: Game): boolean {
+    return game.playerCount < 2 && !this.isUserInGame(game);
+  }
+
+  // Verificar si el usuario puede unirse a un juego lleno (2/2) para continuar
+  canJoinFullGame(game: Game): boolean {
+    return game.playerCount >= 2 && this.isUserInGame(game);
   }
 
   refreshGames(): void {

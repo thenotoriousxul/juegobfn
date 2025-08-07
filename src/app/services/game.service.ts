@@ -8,6 +8,7 @@ export interface Game {
   name: string;
   status: 'waiting' | 'active' | 'finished';
   creator: string;
+  creatorId: number;
   playerCount: number;
   players: { id: number; username: string }[];
 }
@@ -34,7 +35,8 @@ export interface GameState {
     board: string[][];
     shipsRemaining: number;
     isCurrentTurn: boolean;
-  };
+  } | null;
+  waiting?: boolean; // Indica si el juego está esperando jugadores
 }
 
 export interface GameMove {
@@ -73,13 +75,18 @@ export interface MoveResult {
   providedIn: 'root'
 })
 export class GameService {
-  private apiUrl = 'http://localhost:3333';
+  private apiUrl = 'http://192.168.118.120:3333';
 
   constructor(private http: HttpClient) {}
 
   // Obtener lista de juegos disponibles
   getGames(): Observable<{ success: boolean; games: Game[] }> {
     return this.http.get<{ success: boolean; games: Game[] }>(`${this.apiUrl}/games`);
+  }
+
+  // Obtener juegos activos de un usuario
+  getActiveGames(userId: number): Observable<{ success: boolean; activeGames: Game[] }> {
+    return this.http.get<{ success: boolean; activeGames: Game[] }>(`${this.apiUrl}/games/active?userId=${userId}`);
   }
 
   // Crear un nuevo juego
@@ -139,5 +146,10 @@ export class GameService {
   // Rendirse o abandonar una partida
   surrenderGame(gameId: number, userId: number): Observable<any> {
     return this.http.post(`${this.apiUrl}/games/${gameId}/surrender`, { userId });
+  }
+
+  // Cancelar un juego en espera (solo creador)
+  cancelGame(gameId: number, userId: number): Observable<any> {
+    return this.http.delete(`${this.apiUrl}/games/${gameId}/cancel`, { body: { userId } });
   }
 } 
