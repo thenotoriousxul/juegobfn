@@ -8,9 +8,10 @@ export default class AuthController {
    */
   async register({ request, response }: HttpContext) {
     try {
-      const { username, email, password } = request.only(['username', 'email', 'password'])
+      const { username, name, email, password } = request.only(['username', 'name', 'email', 'password'])
+      const finalUsername = username || name
 
-      const validationErrors = this.validateRegistrationData(username, email, password)
+      const validationErrors = this.validateRegistrationData(finalUsername, email, password)
       if (validationErrors.length > 0) {
         return response.status(400).json({
           success: false,
@@ -36,7 +37,7 @@ export default class AuthController {
       // }
 
       const user = await User.create({
-        username,
+        username: finalUsername,
         email,
         password: await hash.make(password),
         gamesWon: 0,
