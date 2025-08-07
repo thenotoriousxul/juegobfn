@@ -1,14 +1,11 @@
 import { DateTime } from 'luxon'
 import { BaseModel, column, hasMany } from '@adonisjs/lucid/orm'
-import { withAuthFinder } from '@adonisjs/auth/mixins/lucid'
 import { DbAccessTokensProvider } from '@adonisjs/auth/access_tokens'
 import type { HasMany } from '@adonisjs/lucid/types/relations'
 import Game from './game.js'
 import GamePlayer from './game_player.js'
 
-const AuthFinder = withAuthFinder(() => import('#models/user'))
-
-export default class User extends AuthFinder {
+export default class User extends BaseModel {
   static accessTokens = DbAccessTokensProvider.forModel(User, {
     expiresIn: '30 days',
     prefix: 'oat_',

@@ -2,7 +2,7 @@ import { Routes } from '@angular/router';
 import { AuthComponent } from './components/auth/auth.component';
 import { DashboardComponent } from './components/dashboard/dashboard.component';
 import { GameComponent } from './components/game/game.component';
-import { AuthGuard } from './guards/auth.guard';
+import { authGuard } from './guards/auth.guard';
 import { PublicGuard } from './guards/public.guard';
 
 export const routes: Routes = [
@@ -15,12 +15,12 @@ export const routes: Routes = [
   { 
     path: 'dashboard', 
     component: DashboardComponent,
-    canActivate: [AuthGuard]
+    canActivate: [authGuard]
   },
   { 
     path: 'game/:id', 
     component: GameComponent,
-    canActivate: [AuthGuard]
+    canActivate: [authGuard]
   },
   { path: '**', redirectTo: '/dashboard' }
 ];

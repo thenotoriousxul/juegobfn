@@ -1,25 +1,29 @@
-import { Injectable } from '@angular/core';
-import { CanActivate, Router } from '@angular/router';
+import { inject } from '@angular/core';
 import { AuthService } from '../services/auth.service';
+import { Observable, of } from 'rxjs';
+import { map, catchError } from 'rxjs/operators';
 
-@Injectable({
-  providedIn: 'root'
-})
-export class AuthGuard implements CanActivate {
-  constructor(
-    private authService: AuthService,
-    private router: Router
-  ) {}
-
-  canActivate(): boolean {
-    // Verificar la validez de la sesión antes de permitir acceso
-    const isSessionValid = this.authService.validateSession();
-    
-    if (isSessionValid) {
-      return true;
-    } else {
-      // La sesión no es válida, el AuthService ya maneja la redirección
-      return false;
-    }
+export const authGuard = (): Observable<boolean> => {
+  const authService = inject(AuthService);
+  
+  // Primero validación rápida local
+  const isSessionValid = authService.validateSession();
+  
+  if (!isSessionValid) {
+    return of(false);
   }
-} 
+  
+  // Luego validación con el servidor para detectar tokens modificados
+  return authService.checkTokenValidity().pipe(
+    map(isValid => {
+      if (!isValid) {
+        console.log('🔒 Token inválido o modificado, redirigiendo a login');
+      }
+      return isValid;
+    }),
+    catchError(() => {
+      console.log('🔒 Error validando token, redirigiendo a login');
+      return of(false);
+    })
+  );
+}; 

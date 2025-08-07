@@ -161,9 +161,37 @@ export default class AuthController {
   }
 
   /**
-   * Obtener perfil del usuario
+   * Obtener perfil del usuario autenticado (usando token)
    */
-  async profile({ params, response }: HttpContext) {
+  async profile({ auth, response }: HttpContext) {
+    try {
+      // El middleware auth ya debería haber autenticado al usuario
+      const user = auth.getUserOrFail()
+      
+      return response.json({
+        success: true,
+        user: {
+          id: user.id,
+          username: user.username,
+          email: user.email,
+          gamesWon: user.gamesWon,
+          gamesLost: user.gamesLost,
+          createdAt: user.createdAt
+        }
+      })
+    } catch (error) {
+      console.error('Error fetching user profile:', error)
+      return response.status(401).json({
+        success: false,
+        message: 'Usuario no autenticado'
+      })
+    }
+  }
+
+  /**
+   * Obtener perfil de usuario por ID (mantiene compatibilidad)
+   */
+  async profileById({ params, response }: HttpContext) {
     try {
       const userId = params.id
       const user = await User.findOrFail(userId)

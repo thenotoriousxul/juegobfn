@@ -1,9 +1,8 @@
 import { Injectable } from '@angular/core';
 import { HttpClient } from '@angular/common/http';
 import { BehaviorSubject, Observable } from 'rxjs';
-import { map } from 'rxjs/operators';
+import { map, catchError } from 'rxjs/operators';
 import { Router } from '@angular/router';
-import { StorageMonitorService } from './storage-monitor.service';
 
 export interface User {
   id: number;
@@ -17,6 +16,10 @@ export interface AuthResponse {
   success: boolean;
   message: string;
   user?: User;
+  token?: {
+    type: string;
+    value: string;
+  };
 }
 
 @Injectable({
@@ -26,58 +29,29 @@ export class AuthService {
   private apiUrl = 'http://192.168.118.120:3333';
   private currentUserSubject = new BehaviorSubject<User | null>(null);
   public currentUser$ = this.currentUserSubject.asObservable();
-  private originalUserHash: string | null = null;
+  private tokenKey = 'auth_token';
+  private userKey = 'currentUser';
+  private lastToken: string | null = null;
+  private tokenWatchTimerId: any = null;
 
   constructor(
     private http: HttpClient,
-    private router: Router,
-    private storageMonitor: StorageMonitorService
+    private router: Router
   ) {
-    // Recuperar usuario del localStorage al inicializar
-    const savedUser = localStorage.getItem('currentUser');
-    if (savedUser) {
-      try {
-        const parsedUser = JSON.parse(savedUser);
-        
-        // Validar estructura básica del usuario guardado
-        if (this.isValidUserStructure(parsedUser)) {
-          // Generar hash para la sesión actual basado en el usuario guardado
-          this.originalUserHash = this.generateUserHash(parsedUser);
-          this.currentUserSubject.next(parsedUser);
-        } else {
-          console.log('Usuario guardado tiene estructura inválida, limpiando...');
-          localStorage.removeItem('currentUser');
-        }
-      } catch (error) {
-        console.log('Error al parsear usuario guardado, limpiando localStorage...');
-        localStorage.removeItem('currentUser');
-      }
-    }
+    this.cleanupOldTokens();
+    this.validateSession();
+    this.startTokenWatch();
 
-    // Escuchar cambios en localStorage
-    this.storageMonitor.storageChanges$.subscribe(change => {
-      if (change && change.key === 'currentUser') {
-        if (change.newValue === null && change.oldValue !== null) {
-          // Usuario fue eliminado del localStorage
-          this.handleUserRemoval();
-        } else if (change.newValue) {
-          // Verificar si el usuario fue modificado maliciosamente
-          if (!this.validateUserIntegrity(change.newValue)) {
-            console.log('Datos de usuario manipulados detectados, cerrando sesión...');
-            this.handleUserRemoval();
-          } else {
-            // Usuario fue actualizado legítimamente
-            this.currentUserSubject.next(change.newValue);
-          }
-        }
+    // Detectar cambios en otras pestañas/ventanas
+    window.addEventListener('storage', (event: StorageEvent) => {
+      if (event.key === this.tokenKey) {
+        this.handleTokenChange(event.newValue);
       }
     });
   }
 
   register(username: string, email: string, password: string): Observable<AuthResponse> {
     const url = `${this.apiUrl}/auth/register`;
-    console.log('Register URL:', url);
-    console.log('Register data:', { username, email, password: '***' });
     return this.http.post<AuthResponse>(url, {
       username,
       email,
@@ -87,28 +61,42 @@ export class AuthService {
 
   login(email: string, password: string): Observable<AuthResponse> {
     const url = `${this.apiUrl}/auth/login`;
-    console.log('Login URL:', url);
-    console.log('Login data:', { email, password: '***' });
-    return this.http.post<AuthResponse>(url, {
-      email,
-      password
-    }).pipe(
+    
+    return this.http.post<AuthResponse>(url, { email, password }).pipe(
       map(response => {
-        if (response.success && response.user) {
-          // Generar hash del usuario original
-          this.originalUserHash = this.generateUserHash(response.user);
-          localStorage.setItem('currentUser', JSON.stringify(response.user));
+        if (response.success && response.user && response.token) {
+          // Guardar token y usuario en localStorage
+          localStorage.setItem(this.tokenKey, response.token.value);
+          localStorage.setItem(this.userKey, JSON.stringify(response.user));
           this.currentUserSubject.next(response.user);
+          this.lastToken = response.token.value;
         }
         return response;
       })
     );
   }
 
-  logout(): void {
-    localStorage.removeItem('currentUser');
-    this.currentUserSubject.next(null);
-    this.originalUserHash = null;
+  logout(): Observable<any> {
+    const token = this.getToken();
+    
+    if (!token) {
+      // Si no hay token, simplemente limpiar y redirigir
+      this.clearSession();
+      return new Observable(observer => {
+        observer.next({ success: true });
+        observer.complete();
+      });
+    }
+
+    // Si hay token, hacer logout en el servidor
+    const url = `${this.apiUrl}/auth/logout`;
+    
+    return this.http.post<any>(url, {}).pipe(
+      map(response => {
+        this.clearSession();
+        return response;
+      })
+    );
   }
 
   getCurrentUser(): User | null {
@@ -120,149 +108,122 @@ export class AuthService {
   }
 
   /**
-   * Maneja cuando el usuario es eliminado del localStorage
+   * Obtiene el token de autenticación
    */
-  private handleUserRemoval(): void {
-    console.log('Usuario eliminado del localStorage, redirigiendo al login...');
-    this.currentUserSubject.next(null);
-    this.router.navigate(['/auth']);
+  getToken(): string | null {
+    return localStorage.getItem(this.tokenKey);
   }
 
   /**
-   * Verifica si la sesión es válida comparando con localStorage
+   * Verifica si el token tiene formato válido
+   */
+  private isValidToken(token: string | null): boolean {
+    return token !== null && token.startsWith('oat_');
+  }
+
+  /**
+   * Verifica si la sesión es válida
    */
   validateSession(): boolean {
-    const currentUser = this.getCurrentUser();
-    const savedUser = localStorage.getItem('currentUser');
+    const token = this.getToken();
+    const savedUser = localStorage.getItem(this.userKey);
     
-    if (currentUser && !savedUser) {
-      // El usuario está en memoria pero no en localStorage
-      this.handleUserRemoval();
+    if (!token || !savedUser) {
+      this.clearSession();
       return false;
     }
-    
-    if (!currentUser && savedUser) {
-      // El usuario está en localStorage pero no en memoria
-      try {
-        const parsedUser = JSON.parse(savedUser);
-        
-        // Validar integridad del usuario guardado
-        if (!this.validateUserIntegrity(parsedUser)) {
-          console.log('Usuario en localStorage fue manipulado, cerrando sesión...');
-          this.handleUserRemoval();
-          return false;
-        }
-        
+
+    if (!this.isValidToken(token)) {
+      this.clearSession();
+      return false;
+    }
+
+    try {
+      const parsedUser = JSON.parse(savedUser);
+      
+      // Validar estructura básica del usuario guardado
+      if (this.isValidUserStructure(parsedUser)) {
         this.currentUserSubject.next(parsedUser);
         return true;
-      } catch (error) {
-        // localStorage contiene datos inválidos
-        localStorage.removeItem('currentUser');
-        this.currentUserSubject.next(null);
-        this.router.navigate(['/auth']);
+      } else {
+        this.clearSession();
         return false;
       }
+    } catch (error) {
+      this.clearSession();
+      return false;
+    }
+  }
+
+  /**
+   * Verifica la validez del token con el servidor
+   * Útil para detectar modificaciones manuales del token
+   */
+  checkTokenValidity(): Observable<boolean> {
+    const token = this.getToken();
+    
+    if (!token || !this.isValidToken(token)) {
+      this.clearSession();
+      return new Observable<boolean>(observer => {
+        observer.next(false);
+        observer.complete();
+      });
     }
 
-    // Si hay usuario en memoria, verificar también su integridad
-    if (currentUser) {
-      const savedUserStr = localStorage.getItem('currentUser');
-      if (savedUserStr) {
-        try {
-          const parsedUser = JSON.parse(savedUserStr);
-          if (!this.validateUserIntegrity(parsedUser)) {
-            this.handleUserRemoval();
-            return false;
-          }
-        } catch (error) {
-          this.handleUserRemoval();
+    // Hacer una petición al perfil para validar el token
+    const url = `${this.apiUrl}/auth/profile`;
+    
+    return this.http.get<any>(url).pipe(
+      map(response => {
+        if (response.success && response.user) {
+          // Token válido, actualizar usuario si es necesario
+          this.currentUserSubject.next(response.user);
+          localStorage.setItem(this.userKey, JSON.stringify(response.user));
+          return true;
+        } else {
+          // Token inválido
+          this.clearSession();
           return false;
         }
-      }
-    }
-
-    return currentUser !== null;
+      }),
+      // En caso de error HTTP (401, 403, etc.) considerarlo como token inválido
+      catchError((error: any) => {
+        console.log('Token inválido detectado:', error.status);
+        this.clearSession();
+        return new Observable<boolean>(observer => {
+          observer.next(false);
+          observer.complete();
+        });
+      })
+    );
   }
 
   /**
-   * Genera un hash simple del usuario para validar integridad
+   * Limpia tokens antiguos de otros sistemas
    */
-  private generateUserHash(user: User): string {
-    const userString = `${user.id}-${user.username}-${user.email}`;
-    let hash = 0;
-    for (let i = 0; i < userString.length; i++) {
-      const char = userString.charCodeAt(i);
-      hash = ((hash << 5) - hash) + char;
-      hash = hash & hash; // Convert to 32bit integer
-    }
-    return hash.toString();
-  }
-
-  /**
-   * Valida si los datos del usuario no han sido manipulados
-   */
-  private validateUserIntegrity(user: User): boolean {
-    if (!user || !user.id || !user.username || !user.email) {
-      return false;
-    }
-
-    // Verificar estructura básica
-    if (!this.isValidUserStructure(user)) {
-      return false;
-    }
-
-    // Si no tenemos hash original (primera carga), verificar contra servidor
-    if (!this.originalUserHash) {
-      // Para casos de recarga de página, verificamos contra el servidor
-      this.verifyUserWithServer(user);
-      return true; // Permitimos temporalmente mientras verificamos
-    }
-
-    // Verificar que el hash coincida con el original
-    const currentHash = this.generateUserHash(user);
-    if (currentHash !== this.originalUserHash) {
-      console.log('Hash no coincide:', {
-        original: this.originalUserHash,
-        current: currentHash,
-        user: user
-      });
-      return false;
-    }
-
-    return true;
-  }
-
-  /**
-   * Verifica el usuario contra el servidor
-   */
-  private verifyUserWithServer(user: User): void {
-    const url = `${this.apiUrl}/auth/profile/${user.id}`;
+  private cleanupOldTokens(): void {
+    // Limpiar tokens antiguos
+    localStorage.removeItem('blackjack_token');
+    localStorage.removeItem('playerId');
+    localStorage.removeItem('playerName');
     
-    this.http.get<any>(url).subscribe({
-      next: (response) => {
-        if (!response.success || !response.user) {
-          console.log('Usuario no válido en servidor, cerrando sesión...');
-          this.handleUserRemoval();
-        } else {
-          // Actualizar hash con datos del servidor
-          this.originalUserHash = this.generateUserHash(response.user);
-          
-          // Verificar si los datos locales coinciden con los del servidor
-          const localHash = this.generateUserHash(user);
-          const serverHash = this.generateUserHash(response.user);
-          
-          if (localHash !== serverHash) {
-            console.log('Datos locales no coinciden con servidor, cerrando sesión...');
-            this.handleUserRemoval();
-          }
-        }
-      },
-      error: (error) => {
-        console.error('Error verificando usuario con servidor:', error);
-        // En caso de error de red, mantener la sesión pero marcar como no verificada
-        // Podrías decidir cerrar la sesión aquí si prefieres ser más estricto
+    // Limpiar tokens JWT de otros sistemas que empiecen con 'accessToken'
+    Object.keys(localStorage).forEach(key => {
+      if (key.startsWith('accessToken') && key !== this.tokenKey) {
+        localStorage.removeItem(key);
       }
     });
+  }
+
+  /**
+   * Limpia la sesión local
+   */
+  private clearSession(): void {
+    this.currentUserSubject.next(null);
+    localStorage.removeItem(this.tokenKey);
+    localStorage.removeItem(this.userKey);
+    this.lastToken = null;
+    this.router.navigate(['/auth']);
   }
 
   /**
@@ -279,5 +240,50 @@ export class AuthService {
       (user.gamesWon === undefined || typeof user.gamesWon === 'number') &&
       (user.gamesLost === undefined || typeof user.gamesLost === 'number')
     );
+  }
+
+  /**
+   * Inicia un watcher para detectar cambios locales en el token
+   */
+  private startTokenWatch(): void {
+    this.lastToken = this.getToken();
+    if (this.tokenWatchTimerId) {
+      clearInterval(this.tokenWatchTimerId);
+    }
+    this.tokenWatchTimerId = setInterval(() => {
+      const currentToken = this.getToken();
+      if (currentToken !== this.lastToken) {
+        this.handleTokenChange(currentToken);
+      }
+    }, 1000);
+  }
+
+  /**
+   * Maneja un cambio de token: si es inválido o diferente al previo, cerrar sesión
+   */
+  private handleTokenChange(newToken: string | null): void {
+    const previousToken = this.lastToken;
+    this.lastToken = newToken;
+
+    // Si se eliminó o es inválido, cerrar sesión
+    if (!newToken || !this.isValidToken(newToken)) {
+      this.clearSession();
+      return;
+    }
+
+    // Si cambió respecto al anterior (manipulación), cerrar sesión
+    if (previousToken !== null && newToken !== previousToken) {
+      this.clearSession();
+    }
+  }
+
+  /**
+   * Detiene el watcher del token
+   */
+  private stopTokenWatch(): void {
+    if (this.tokenWatchTimerId) {
+      clearInterval(this.tokenWatchTimerId);
+      this.tokenWatchTimerId = null;
+    }
   }
 } 
