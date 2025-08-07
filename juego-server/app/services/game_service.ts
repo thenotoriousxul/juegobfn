@@ -128,16 +128,26 @@ export default class GameService {
   }
 
   /**
-   * Crea un nuevo juego
+   * Crea un nuevo juego y une automáticamente al creador
    */
-  static async createGame(name: string, creatorId: number): Promise<Game> {
+  static async createGame(name: string, creatorId: number): Promise<{game: Game, gamePlayer: GamePlayer}> {
     const game = await Game.create({
       name,
       creatorId,
       status: 'waiting'
     })
 
-    return game
+    // Unir automáticamente al creador como primer jugador
+    const board = this.generateRandomBoard()
+    const gamePlayer = await GamePlayer.create({
+      gameId: game.id,
+      userId: creatorId,
+      board: JSON.stringify(board),
+      shipsRemaining: 15,
+      isCurrentTurn: true // El creador siempre empieza primero
+    })
+
+    return { game, gamePlayer }
   }
 
   /**
@@ -184,12 +194,14 @@ export default class GameService {
   }
 
   /**
-   * Rendirse en un juego
+   * Rendirse/Abandonar un juego (funciona tanto en waiting como en active)
    */
   static async surrender(gameId: number, userId: number): Promise<any> {
     const game = await Game.findOrFail(gameId)
-    if (game.status !== 'active') {
-      throw new Error('El juego no está activo')
+    
+    // Verificar que el juego no esté terminado
+    if (game.status === 'finished') {
+      throw new Error('El juego ya ha terminado')
     }
 
     const player = await GamePlayer.query()
@@ -197,6 +209,32 @@ export default class GameService {
       .where('userId', userId)
       .firstOrFail()
 
+    // Si el juego está en espera (waiting), simplemente cancelar el juego
+    if (game.status === 'waiting') {
+      // Si es el creador, cancelar completamente el juego
+      if (game.creatorId === userId) {
+        await GameMove.query().where('gameId', gameId).delete()
+        await GamePlayer.query().where('gameId', gameId).delete()
+        await game.delete()
+        
+        return {
+          gameFinished: true,
+          gameCanceled: true,
+          message: 'Juego cancelado exitosamente'
+        }
+      } else {
+        // Si no es el creador, solo salir del juego
+        await player.delete()
+        
+        return {
+          gameFinished: false,
+          leftGame: true,
+          message: 'Has salido del juego'
+        }
+      }
+    }
+
+    // Si el juego está activo, rendirse normalmente
     const opponent = await GamePlayer.query()
       .where('gameId', gameId)
       .where('userId', '!=', userId)
@@ -320,18 +358,44 @@ export default class GameService {
       .preload('user')
 
     const currentPlayer = players.find(p => p.userId === userId)
-    const opponent = players.find(p => p.userId !== userId)
-
-    if (!currentPlayer || !opponent) {
-      throw new Error('Jugador no encontrado en el juego')
+    
+    if (!currentPlayer) {
+      throw new Error('No estás registrado en este juego')
     }
 
+    const opponent = players.find(p => p.userId !== userId)
+
+    // Si no hay oponente (juego en espera), devolver estado de espera
+    if (!opponent) {
+      const currentPlayerBoard = JSON.parse(currentPlayer.board)
+      
+      return {
+        game: {
+          id: game.id,
+          name: game.name,
+          status: game.status,
+          winnerId: game.winnerId
+        },
+        currentPlayer: {
+          id: currentPlayer.id,
+          userId: currentPlayer.userId,
+          username: currentPlayer.user.username,
+          board: currentPlayerBoard,
+          shipsRemaining: currentPlayer.shipsRemaining,
+          isCurrentTurn: currentPlayer.isCurrentTurn
+        },
+        opponent: null, // No hay oponente todavía
+        waiting: true // Indicador de que está esperando jugadores
+      }
+    }
+
+    // Si hay oponente, devolver estado completo del juego
     const currentPlayerBoard = JSON.parse(currentPlayer.board)
     const opponentBoard = JSON.parse(opponent.board)
 
     // Ocultar barcos del oponente
-    const hiddenOpponentBoard = opponentBoard.map(row => 
-      row.map(cell => cell === 'ship' ? 'water' : cell)
+    const hiddenOpponentBoard = opponentBoard.map((row: string[]) => 
+      row.map((cell: string) => cell === 'ship' ? 'water' : cell)
     )
 
     return {
@@ -356,7 +420,8 @@ export default class GameService {
         board: hiddenOpponentBoard,
         shipsRemaining: opponent.shipsRemaining,
         isCurrentTurn: opponent.isCurrentTurn
-      }
+      },
+      waiting: false
     }
   }
 } 

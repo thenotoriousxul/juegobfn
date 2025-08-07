@@ -122,7 +122,7 @@ export default class GamesController {
         })
       }
       
-      const game = await GameService.createGame(name, creatorId)
+      const { game, gamePlayer } = await GameService.createGame(name, creatorId)
       
       return response.status(201).json({
         success: true,
@@ -131,7 +131,12 @@ export default class GamesController {
           id: game.id,
           name: game.name,
           status: game.status
-        }
+        },
+        gamePlayer: {
+          id: gamePlayer.id,
+          isCurrentTurn: gamePlayer.isCurrentTurn
+        },
+        shouldRedirect: true // Indicar al frontend que debe redirigir
       })
     } catch (error) {
       return response.status(500).json({
