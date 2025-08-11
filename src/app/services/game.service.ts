@@ -75,7 +75,7 @@ export interface MoveResult {
   providedIn: 'root'
 })
 export class GameService {
-  private apiUrl = 'http://192.168.118.120:3333';
+  private apiUrl = 'http://192.168.253.190:3333';
 
   constructor(private http: HttpClient) {}
 
